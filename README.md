@@ -75,32 +75,33 @@ Host agents report endpoint logs; the Raspberry Pi runs Suricata for network-lay
 ## Folder Structure
 
 ```
-Cyber Security Project/
-├── README.md                      ← this file
-├── PROJECT_STATUS.md              ← current progress tracker
+cyber-security-soc-lab/
+├── README.md                          ← this file
+├── PROJECT_STATUS.md                  ← current progress tracker
+├── .github/workflows/validate.yml     ← CI: rule-XML + glyph + key-doc checks
 ├── docs/
-│   ├── SOC_Lab_Project_Plan.md   ← master plan (full timeline)
+│   ├── SOC_Lab_Project_Plan.md        ← master plan (full timeline)
+│   ├── Server_Migration_Runbook.md    ← rebuild the Wazuh server (Docker on Arch)
+│   ├── Signature_Project_Detection_Gap.md  ← the focused detection-gap case study
 │   ├── guides/
-│   │   ├── Full_Implementation_Guide.md
 │   │   ├── Blue_Team_Home_Lab_Guide.md
 │   │   ├── Blue_Team_Lab_Phases_2-7_Complete_Guide.md
 │   │   └── Quick_Command_Reference.md
+│   ├── archive/
+│   │   └── UNVERIFIED_Full_Implementation_Guide.md  ← quarantined AI draft, do not rely on
 │   └── references/
 │       ├── Architecting_Blue_Team_Home_Lab.pdf
 │       └── Beyond_Alert_Chasing.pdf
 ├── phases/
-│   ├── phase0_environment_setup/
-│   ├── phase1_wazuh_deployment/
-│   ├── phase2_log_ingestion/
 │   ├── phase3_threat_simulation/
 │   ├── phase4_detection_engineering/
 │   ├── phase5_investigation_playbooks/
 │   ├── phase6_portfolio/
-│   └── phase7_raspberry_pi/       ← RPi setup guide here
-├── incidents/                     ← incident reports (portfolio evidence)
-├── rules/                         ← custom Wazuh detection rules
+│   └── phase7_raspberry_pi/           ← RPi + Suricata setup guide
+├── incidents/                         ← incident reports (+ report template)
+├── rules/                             ← custom Wazuh detection rules (local_rules.xml)
 └── portfolio/
-    └── screenshots/               ← dashboard screenshots for CV/LinkedIn
+    └── screenshots/                   ← dashboard screenshots for CV/LinkedIn
 ```
 
 ---

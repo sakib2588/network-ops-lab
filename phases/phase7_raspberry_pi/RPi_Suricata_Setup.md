@@ -262,4 +262,4 @@ After completing this phase, write a short note in your thesis notes:
 
 > "Suricata IDS running on Raspberry Pi 4 monitors raw Ethernet frames on the lab network. Unlike feature-extracted dataset attacks, traffic generated here must conform to TCP/IP protocol constraints — providing a physical demonstration of the realizability gap described in Ennaji et al. (2025)."
 
-Save that note at: `/media/filwel/All/Sakib/Theisis & Internship /thiesis  /MD files/lab_realizability_evidence.md`
+Save that note in your thesis notes, e.g. `<your-thesis-notes>/lab_realizability_evidence.md`.

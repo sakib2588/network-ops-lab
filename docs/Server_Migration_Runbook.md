@@ -140,6 +140,13 @@ Expected: creates files under `config/wazuh_indexer_ssl_certs/`.
 
 - [ ] **Step 5: Start the stack**
 
+> **12 GB RAM note (this hardware):** the Indexer (OpenSearch) defaults to claiming up to half
+> the host RAM for its JVM heap, which can OOM the laptop on first boot. Pin it: in
+> `docker-compose.yml`, set `OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g` on the `wazuh.indexer` service
+> (under its `environment:`), and close other heavy apps (browser, IDE) during bring-up.
+> After it is up, confirm headroom with `docker stats` (no container pinned near its limit).
+> If the indexer still crash-loops, that is almost always RAM or `vm.max_map_count` (Task 2).
+
 ```bash
 docker compose up -d
 docker compose ps
@@ -275,7 +282,7 @@ In `README.md` and `PROJECT_STATUS.md`, confirm the Wazuh Server row reads: *12 
 - [ ] **Step 3: Commit (git identity sakib2588)**
 
 ```bash
-cd "/media/filwel/All/Sakib/Cyber Security Project"
+cd <path-to-your-repo>     # your local clone of this repo
 git add -A
 git commit -m "Rebuild Wazuh server: Docker single-node on always-on Arch laptop"
 ```
