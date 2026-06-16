@@ -1,27 +1,30 @@
 # Project Status — Wazuh SOC Home Lab
 
-**Last updated:** 2026-06-13  
-**Current phase:** Phase 3 (Threat Simulation) + Phase 7 (RPi) in parallel  
-**Overall completion:** ~30%
+**Last updated:** 2026-06-16  
+**Current phase:** Rebuilding the lab (Step 0), then Phase 3 (Threat Simulation) + Phase 7 (RPi)  
+**Overall completion:** ~25% (server being migrated)
+
+> **Reality check:** the original Wazuh server lived on a VirtualBox VM that is now powered
+> off. The server is being rebuilt as Docker single-node on the 12 GB Arch laptop, then agents
+> re-enrolled. Follow `docs/Server_Migration_Runbook.md`. Earlier "4 nodes Active" status
+> referred to the old VM and no longer holds until the rebuild gate passes.
 
 ---
 
 ## What Is Done
 
-- [x] Ubuntu 24.04 installed on laptop (Wazuh Server)
-- [x] Wazuh server deployed and running
-- [x] PC 1 (Ubuntu) — Wazuh agent connected
-- [x] PC 2 (Windows) — Wazuh agent connected
-- [x] PC 1 Windows side — agent configured
-- [x] 4 nodes visible in Wazuh dashboard
-- [x] Basic log ingestion confirmed
+- [x] Original Wazuh lab built once (VM-based) -- Phases 0-2 reached, now being migrated
+- [x] Old VM preserved as rollback (`phase_2_complete` snapshot)
+- [x] Signature project script written (`docs/Signature_Project_Detection_Gap.md`)
 
 ---
 
 ## What Is In Progress
 
-- [ ] Raspberry Pi 4 setup — Ubuntu Server + Suricata + Wazuh agent (target: June 21)
-- [ ] Phase 3: First threat simulation (nmap scan from RPi to other nodes)
+- [ ] Step 0: Rebuild Wazuh server (Docker on Arch laptop) per `docs/Server_Migration_Runbook.md`
+- [ ] Re-enroll agents -- gate: dashboard reachable, >=2 agents Active
+- [ ] Raspberry Pi 4 setup -- Suricata + Wazuh agent (target: June 21)
+- [ ] Phase 3: Signature project attack chain (see `docs/Signature_Project_Detection_Gap.md`)
 
 ---
 

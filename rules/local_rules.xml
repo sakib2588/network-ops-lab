@@ -1,0 +1,36 @@
+<!--
+  Wazuh custom rules for the SOC lab.
+
+  This file mirrors what you put in /var/ossec/etc/rules/local_rules.xml on the manager,
+  so the GitHub artifact shows your detection engineering work.
+
+  ID range: custom rules use 100000+. The examples in
+  docs/guides/Blue_Team_Home_Lab_Guide.md (Section 4) already use 100001-100014,
+  so START YOUR RULES AT 100015 to avoid an ID collision.
+
+  Syntax reference (do not reinvent): docs/guides/Blue_Team_Home_Lab_Guide.md Section 4.2.
+  Validate every rule with: sudo /var/ossec/bin/wazuh-logtest
+
+  The block below is a TEMPLATE, not a live rule. Fill it in during Step 3 of
+  docs/Signature_Project_Detection_Gap.md, after Step 2 tells you which technique is
+  logged but not alerted by default. Read the parent rule id and the decoded field names
+  from wazuh-logtest before you set <if_sid> and <field>.
+-->
+<group name="local,soc_lab,">
+
+  <!--
+    TEMPLATE: detection for the gap found in Step 2 (e.g. sudo access to a sensitive file).
+    Technique: T1548.003 (Sudo and Sudo Caching) -- adjust to your actual finding.
+
+  <rule id="100015" level="10">
+    <if_sid>PARENT_RULE_ID</if_sid>            // set to the rule id wazuh-logtest reports
+    <field name="DECODED_FIELD">PATTERN</field> // match only a field the decoder produced
+    <description>Sensitive file access via sudo detected (T1548.003)</description>
+    <mitre>
+      <id>T1548.003</id>
+    </mitre>
+    <group>attack,privilege_escalation,</group>
+  </rule>
+  -->
+
+</group>
