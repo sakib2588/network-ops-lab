@@ -33,6 +33,50 @@ Agent device IPs (for your own tracking):
 
 ---
 
+## Pre-flight: 2 checks on the laptop (10 seconds)
+
+Run these **on the 12 GB laptop** before anything else. Both must pass:
+
+```bash
+free -h     # RAM: want ~9 GB+ free  (lean Arch idles ~2.5 GB on a 12 GB box)
+df -h /     # Disk: want 20 GB+ free
+```
+
+- RAM free under ~7 GB → close apps (browser, IDE) first.
+- Disk free under ~15 GB → free space before starting.
+
+---
+
+## Quick Start (the happy path)
+
+The whole flow at a glance. Each line maps to a Task below — **if anything fails or is unclear, drop to that Task for the full detail and verify gate.** Do not skip the heap pin in Task 3.
+
+```bash
+# Task 1 — reserve a fixed IP for the laptop in your router (GUI step, no command)
+
+# Task 2 — Docker + kernel prep
+sudo pacman -Syu --needed docker docker-compose git
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"          # then LOG OUT and back in
+echo 'vm.max_map_count=262144' | sudo tee /etc/sysctl.d/99-wazuh.conf
+sudo sysctl -p /etc/sysctl.d/99-wazuh.conf
+docker run --rm hello-world              # must print "Hello from Docker!"
+
+# Task 3 — deploy Wazuh
+git clone https://github.com/wazuh/wazuh-docker.git && cd wazuh-docker
+git tag | grep -E '^v4\.' | sort -V | tail -5     # pick the highest, e.g. v4.9.0
+git checkout v4.9.0 && cd single-node             # <-- use the real tag you picked
+#  *** REQUIRED: edit docker-compose.yml -> add to wazuh.indexer environment:
+#      - "OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g"      (Task 3 Step 5 — DO NOT SKIP)
+docker compose -f generate-indexer-certs.yml run --rm generator
+docker compose up -d && docker compose ps         # all 3 containers must be Up
+
+# Task 4 — open https://<SERVER_IP> in a browser, log in admin / your password
+# Task 5 — enroll each agent (one at a time) pointing at <SERVER_IP>
+```
+
+---
+
 ## Task 1: Give the server laptop a fixed address
 
 **Files:** router admin page (or `systemd-networkd` / NetworkManager on Arch)
@@ -138,14 +182,30 @@ docker compose -f generate-indexer-certs.yml run --rm generator
 ```
 Expected: creates files under `config/wazuh_indexer_ssl_certs/`.
 
-- [ ] **Step 5: Start the stack**
+- [ ] **Step 5: Pin the Indexer heap — REQUIRED on the 12 GB laptop (do NOT skip)**
 
-> **12 GB RAM note (this hardware):** the Indexer (OpenSearch) defaults to claiming up to half
-> the host RAM for its JVM heap, which can OOM the laptop on first boot. Pin it: in
-> `docker-compose.yml`, set `OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g` on the `wazuh.indexer` service
-> (under its `environment:`), and close other heavy apps (browser, IDE) during bring-up.
-> After it is up, confirm headroom with `docker stats` (no container pinned near its limit).
-> If the indexer still crash-loops, that is almost always RAM or `vm.max_map_count` (Task 2).
+By default the Indexer (OpenSearch) grabs up to **half the host RAM** for its JVM heap. On a 12 GB laptop that is ~6 GB, which crowds the manager + dashboard and **OOM-kills the stack on first boot**. Pin the heap to 2 GB before you ever run `docker compose up`.
+
+Open `docker-compose.yml` (you are in `wazuh-docker/single-node/`) and find the `wazuh.indexer:` service. Under its `environment:` block, add the heap line so it looks like this:
+
+```yaml
+  wazuh.indexer:
+    # ...existing settings (image, hostname, ports, volumes)...
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g"   # <-- ADD THIS LINE (pins heap to 2 GB)
+```
+
+If an `environment:` block already exists on that service, just add the `- "OPENSEARCH_JAVA_OPTS=..."` line to it — do not create a second `environment:` key.
+
+Then save the file. Also close heavy apps (browser, IDE) during the first boot.
+
+**VERIFY (before continuing):** confirm the line is present:
+```bash
+grep -n 'OPENSEARCH_JAVA_OPTS' docker-compose.yml
+```
+Expected: one line showing `-Xms2g -Xmx2g`. If it prints nothing, you have not saved the edit — fix it before starting the stack.
+
+- [ ] **Step 6: Start the stack**
 
 ```bash
 docker compose up -d
@@ -153,14 +213,17 @@ docker compose ps
 ```
 Expected: `wazuh.manager`, `wazuh.indexer`, `wazuh.dashboard` all `Up`. First boot takes 1–3 minutes while the indexer initializes.
 
-- [ ] **Step 6: Watch for a clean indexer start**
+- [ ] **Step 7: Watch for a clean indexer start, and confirm RAM headroom**
 
 ```bash
-docker compose logs -f wazuh.indexer | grep -i -m1 'started'
+docker compose logs -f wazuh.indexer | grep -i -m1 'started'   # Ctrl-C once you see it
+docker stats --no-stream                                       # no container should sit near its MEM limit
 ```
-Expected: a line indicating the indexer started. Ctrl-C out once seen.
+Expected: an indexer "started" line, and `docker stats` shows the indexer using roughly 2–3 GB (not 6+).
 
-**VERIFY GATE:** all three containers `Up`, no crash-loop (`docker compose ps` stable after 5 min). ✅
+> **If the indexer crash-loops** (`docker compose ps` shows it restarting): it is almost always one of two things — (1) you skipped the heap pin in Step 5, or (2) `vm.max_map_count` is not 262144 (Task 2, Step 3). Re-check both, then `docker compose down && docker compose up -d`.
+
+**VERIFY GATE:** all three containers `Up`, no crash-loop (`docker compose ps` stable after 5 min), and `docker stats` shows the indexer near 2–3 GB. ✅
 
 ---
 
