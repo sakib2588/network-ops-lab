@@ -20,7 +20,7 @@
 
   <!--
     TEMPLATE: detection for the gap found in Step 2 (e.g. sudo access to a sensitive file).
-    Technique: T1548.003 (Sudo and Sudo Caching) -- adjust to your actual finding.
+    Technique: T1548.003 (Sudo and Sudo Caching); adjust to your actual finding.
 
   <rule id="100015" level="10">
     <if_sid>PARENT_RULE_ID</if_sid>            // set to the rule id wazuh-logtest reports
