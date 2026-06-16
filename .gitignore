@@ -1,0 +1,18 @@
+# Secrets / credentials — never commit
+*.key
+*.pem
+*.env
+.env
+credentials*
+*secret*
+*password*.txt
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Wazuh runtime artifacts (if ever copied in)
+*.log
+ossec.conf.bak
