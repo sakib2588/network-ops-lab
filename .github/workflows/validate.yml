@@ -1,0 +1,50 @@
+name: validate
+
+# Validates the SOC lab artifacts on every push / PR:
+#  - Wazuh rule files are well-formed XML (catches the kind of bug a manual review missed)
+#  - no banned glyphs (section-mark U+00A7, pilcrow U+00B6) per repo writing standard
+#  - key project docs exist
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libxml2-utils (xmllint)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+
+      - name: Validate Wazuh rule XML
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(rules/*.xml)
+          if [ ${#files[@]} -eq 0 ]; then echo "No rule XML files found."; exit 0; fi
+          for f in "${files[@]}"; do
+            echo "Checking $f"
+            xmllint --noout "$f"
+          done
+          echo "All rule XML files are well-formed."
+
+      - name: Check for banned glyphs (section-mark / pilcrow)
+        run: |
+          set -e
+          # U+00A7 = \xc2\xa7 (section-mark), U+00B6 = \xc2\xb6 (pilcrow)
+          if grep -rlP '\xc2\xa7|\xc2\xb6' --include='*.md' --include='*.xml' --include='*.yml' . ; then
+            echo "::error::Banned glyph (section-mark or pilcrow) found in the files listed above."
+            exit 1
+          fi
+          echo "No banned glyphs."
+
+      - name: Check key docs exist
+        run: |
+          set -e
+          for f in README.md PROJECT_STATUS.md docs/Server_Migration_Runbook.md docs/Signature_Project_Detection_Gap.md; do
+            test -f "$f" || { echo "::error::Missing required file: $f"; exit 1; }
+          done
+          echo "All key docs present."

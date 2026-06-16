@@ -12,15 +12,46 @@ Build a functional Security Operations Center (SOC) home lab using Wazuh SIEM, d
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart TB
+    subgraph net["Home LAN (single subnet)"]
+        server["12 GB Laptop (Arch + Docker)<br/>Wazuh Server: Manager + Indexer + Dashboard<br/>always-on, static-reserved IP"]
+        pc1["16 GB PC (Ubuntu)<br/>Wazuh agent"]
+        pc2["4 GB PC (Windows 10)<br/>Wazuh agent"]
+        popos["Pop!_OS box<br/>Wazuh agent"]
+        pi["Raspberry Pi 4 (4 GB)<br/>Suricata network sensor + Wazuh agent"]
+    end
+
+    pc1 -- "host logs" --> server
+    pc2 -- "host logs" --> server
+    popos -- "host logs" --> server
+    pi -- "network alerts (eve.json)" --> server
+
+    classDef srv fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    classDef agt fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
+    classDef sensor fill:#fde2e2,stroke:#c0392b,stroke-width:2px,color:#5a1212
+    class server srv
+    class pc1,pc2,popos agt
+    class pi sensor
+```
+
+Host agents report endpoint logs; the Raspberry Pi runs Suricata for network-layer detection and forwards alerts to the same Wazuh server — two telemetry vantage points (host + network).
+
+---
+
 ## Hardware Inventory
 
 | Device | Role | Specs | Status |
 |---|---|---|---|
-| Laptop | Wazuh Server (SIEM) | 12GB RAM, Ubuntu 24.04 | Active |
-| PC 1 (Ubuntu) | Linux Agent | 16GB RAM, dual-boot | Active |
-| PC 2 | Windows Agent | 4GB RAM, Windows 10 | Active |
-| PC 1 (Windows) | Windows Agent 2 | 16GB RAM | Boot when needed |
-| Raspberry Pi 4 | Network Sensor (Suricata) | 4GB RAM | Setup this week |
+| 12 GB Laptop (Arch) | Wazuh Server (SIEM), Docker | 12GB RAM, always-on | Rebuilding |
+| PC 1 (Ubuntu) | Linux Agent | 16GB RAM, dual-boot | Enroll fresh |
+| PC 2 | Windows Agent | 4GB RAM, Windows 10 | Enroll fresh |
+| Pop!_OS box | Linux Agent | — | Enroll fresh |
+| Raspberry Pi 4 | Network Sensor (Suricata) | 4GB RAM | Enroll fresh (Phase 7) |
+
+> The original Wazuh server (a VirtualBox VM) was decommissioned 2026-06-16; the lab is being rebuilt fresh on the always-home laptop via Docker. See `docs/Server_Migration_Runbook.md`.
 
 ---
 

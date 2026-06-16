@@ -1,10 +1,12 @@
-# Wazuh Server Migration Runbook — VirtualBox VM → Docker on Arch Laptop
+# Wazuh Server Build — Docker on the Arch Laptop
 
 > **For the operator (you):** Execute task-by-task, top to bottom. Each task ends with a **VERIFY GATE** — do not start the next task until the gate passes. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move the Wazuh server off the powered-off VirtualBox VM (on the 16 GB PC) to a fresh Docker deployment on the always-home 12 GB Arch laptop, then re-enroll all agents — without deleting the old VM until the new server is proven.
+> **Note:** The previous Wazuh server (a VirtualBox VM on the 16 GB PC) was decommissioned on 2026-06-16. This is a **fresh build** on the always-home 12 GB Arch laptop — there is no VM to migrate from and no rollback to it. The lab is rebuilt from scratch to Phase 2 (server up, agents reporting), which is faster and cleaner than the old VM setup.
 
-**Architecture:** Wazuh single-node stack (Manager + Indexer + Dashboard) runs as Docker containers via the official `wazuh-docker` compose on Arch Linux. Agents on the LAN point to the laptop's static IP. The old VM and its `phase_2_complete` snapshot are kept untouched as a rollback until verification passes.
+**Goal:** Stand up a fresh Wazuh server as Docker containers on the always-home 12 GB Arch laptop, then enroll all agents so the lab reaches Phase 2 (server live, nodes reporting).
+
+**Architecture:** Wazuh single-node stack (Manager + Indexer + Dashboard) runs as Docker containers via the official `wazuh-docker` compose on Arch Linux. Agents on the LAN point to the laptop's static IP.
 
 **Tech Stack:** Docker + docker-compose, official `wazuh-docker` (single-node), Arch Linux host, Wazuh 4.x agents (Linux + Windows), Suricata on Raspberry Pi.
 
@@ -22,28 +24,12 @@ Before starting, capture these real values. They are **data you look up**, not p
 
 Agent device IPs (for your own tracking):
 
-| Device | OS | IP | Old agent? |
+| Device | OS | IP | Notes |
 |---|---|---|---|
-| 16 GB PC | Ubuntu | `____` | yes (was on VM) |
-| 4 GB PC | Windows | `____` | yes |
-| Pop!_OS box | Linux | `____` | new |
-| Raspberry Pi 4 | Linux + Suricata | `____` | new (Phase 7) |
-
----
-
-## Task 0: Safety — confirm the old VM is a safe rollback
-
-**Files:** none (VirtualBox GUI on the 16 GB PC)
-
-- [ ] **Step 1: Confirm the VM is powered off and snapshots exist**
-
-In VirtualBox Manager, confirm `Wazuh-Server` shows **Powered Off** and the **`phase_2_complete`** snapshot is present. You saw this in your screenshot — good.
-
-- [ ] **Step 2: Do NOT delete, clone-over, or "Reset" this VM**
-
-Leave it exactly as-is for the whole migration. It is your only rollback. A powered-off VM costs nothing.
-
-**VERIFY GATE:** VM is Powered Off, `phase_2_complete` snapshot visible, and you have not clicked Delete/Discard/Reset. ✅ before continuing.
+| 16 GB PC | Ubuntu | `____` | enroll fresh |
+| 4 GB PC | Windows | `____` | enroll fresh |
+| Pop!_OS box | Linux | `____` | enroll fresh |
+| Raspberry Pi 4 | Linux + Suricata | `____` | enroll fresh (Phase 7) |
 
 ---
 
@@ -192,7 +178,7 @@ Go to `https://SERVER_IP` (accept the self-signed cert warning). Log in: user `a
 
 ## Task 5: Re-enroll the agents to the new server
 
-> The new server is fresh — it has none of the old VM's agent keys. Every agent must register against `SERVER_IP`. Do ONE agent first, prove it, then do the rest.
+> The server is fresh — every agent must register against `SERVER_IP`. Do ONE agent first, prove it, then do the rest.
 
 ### 5a — First Linux agent (the Pop!_OS box) as the canary
 
@@ -274,40 +260,25 @@ Then `sudo systemctl restart wazuh-agent`.
 
 ---
 
-## Task 7: Retire the old VM — ONLY after everything above is green
+## Task 7: Update project docs + commit (portfolio evidence)
 
-**Files:** VirtualBox GUI
+**Files:** `PROJECT_STATUS.md`, `README.md`, this runbook
 
 - [ ] **Step 1: Let the new server run 2–3 days collecting from all agents**
 
-Confirm agents stay Active across reboots and you see live events. Do not rush this.
+Confirm agents stay Active across reboots and you see live events before declaring Phase 2 done. Do not rush this.
 
-- [ ] **Step 2: Keep the VM, just leave it off**
+- [ ] **Step 2: Update the hardware table and status**
 
-The VM is already Powered Off. **Do not delete it.** Keep `phase_2_complete` as a permanent rollback. Reclaiming the disk is not worth losing your only backup of the working state.
+In `README.md` and `PROJECT_STATUS.md`, confirm the Wazuh Server row reads: *12 GB laptop (Arch + Docker), always-on, static-reserved IP*, and mark the rebuild to Phase 2 done.
 
-> If you later truly need the disk space, *export* the VM to an `.ova` file first (`File → Export Appliance`), verify the `.ova` opens, and only then remove the VM — per your copy-verify-then-delete rule.
-
-**VERIFY GATE:** new server has run clean for 2–3 days with all agents Active. Old VM untouched. ✅
-
----
-
-## Task 8: Update project docs + commit (portfolio evidence)
-
-**Files:** `PROJECT_STATUS.md`, this runbook
-
-- [ ] **Step 1: Update the hardware table and status**
-
-In `README.md` and `PROJECT_STATUS.md`, change the Wazuh Server row to: *12 GB laptop (Arch + Docker), always-on, static-reserved IP* and mark the migration done.
-
-- [ ] **Step 2: Commit (git identity sakib2588)**
+- [ ] **Step 3: Commit (git identity sakib2588)**
 
 ```bash
 cd "/media/filwel/All/Sakib/Cyber Security Project"
 git add -A
-git commit -m "Migrate Wazuh server from VirtualBox VM to Docker on always-on Arch laptop"
+git commit -m "Rebuild Wazuh server: Docker single-node on always-on Arch laptop"
 ```
-(If this folder isn't a git repo yet, that's a separate step — initialize it when you build the public portfolio repo in Phase 6.)
 
 **VERIFY GATE:** docs reflect reality; a reader of this repo understands the current topology. ✅
 
@@ -315,10 +286,11 @@ git commit -m "Migrate Wazuh server from VirtualBox VM to Docker on always-on Ar
 
 ## Rollback (if the Docker server won't stabilize)
 
-1. `docker compose down` on the laptop (stops the new stack; leaves data volumes).
-2. Power the old `Wazuh-Server` VM back on in VirtualBox.
-3. Re-point agents back to the **VM's** IP (reverse of Task 5).
-4. You have lost nothing — the VM and its snapshot were never touched.
+There is no VM to fall back to — this is a fresh build. If the stack misbehaves:
+
+1. `docker compose down` on the laptop (stops the stack; named data volumes persist).
+2. Check the failing container's logs: `docker compose logs wazuh.indexer` (most issues are the Indexer needing `vm.max_map_count=262144` or insufficient RAM).
+3. Fix the cause, then `docker compose up -d` again. Because the stack is disposable, you can `docker compose down -v` to wipe volumes and start clean as a last resort.
 
 ---
 
@@ -327,4 +299,3 @@ git commit -m "Migrate Wazuh server from VirtualBox VM to Docker on always-on Ar
 - **Server on the 12 GB always-home laptop, not the 32 GB ZBook:** a SIEM's value is continuous collection; uptime beats peak specs. The ZBook travels to uni, so it would create monitoring blind spots.
 - **Docker, not bare-metal install:** Arch isn't an officially supported Wazuh server OS; Docker abstracts the host so the official images run anywhere, and the whole stack is reproducible and disposable.
 - **Pi as Suricata sensor, never the server:** 4 GB ARM can't host the Indexer (OpenSearch), but it's ideal at the network edge for packet inspection.
-- **Keep the old VM:** verify-before-delete. A powered-off VM is a free rollback.
