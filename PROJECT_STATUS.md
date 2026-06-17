@@ -1,28 +1,36 @@
 # Project Status — Wazuh SOC Home Lab
 
-**Last updated:** 2026-06-16  
-**Current phase:** Rebuilding the lab (Step 0), then Phase 3 (Threat Simulation) + Phase 7 (RPi)  
-**Overall completion:** ~25% (server being migrated)
+**Last updated:** 2026-06-17  
+**Current phase:** Server rebuilt (Step 0 server-side done) — next: re-enroll agents, then Phase 3 + Phase 7 (RPi)  
+**Overall completion:** ~35% (Wazuh server live on the Arch laptop; agents not yet enrolled)
 
-> **Reality check:** the original Wazuh server lived on a VirtualBox VM that is now powered
-> off. The server is being rebuilt as Docker single-node on the 12 GB Arch laptop, then agents
-> re-enrolled. Follow `docs/Server_Migration_Runbook.md`. Earlier "4 nodes Active" status
-> referred to the old VM and no longer holds until the rebuild gate passes.
+> **Reality check:** the original Wazuh server (VirtualBox VM) is gone. As of 2026-06-17 the
+> server is **rebuilt and live** as Docker single-node (Wazuh 4.14.5) on the 12 GB Arch laptop
+> at `https://192.168.1.50` (static IP). Dashboard, indexer (green), and manager API->dashboard
+> connection all verified up; default passwords rotated. Agents are NOT yet re-enrolled, so
+> "agents registered" is still 0 until Task 5 of the runbook runs. Full build + troubleshooting
+> write-up: `docs/Server_Rebuild_Journal_2026-06-17.md`.
 
 ---
 
 ## What Is Done
 
-- [x] Original Wazuh lab built once (VM-based) -- Phases 0-2 reached, now being migrated
-- [x] Old VM preserved as rollback (`phase_2_complete` snapshot)
+- [x] Original Wazuh lab built once (VM-based) -- Phases 0-2 reached, now migrated away from
 - [x] Signature project script written (`docs/Signature_Project_Detection_Gap.md`)
+- [x] **Step 0 (server side) — Wazuh server rebuilt 2026-06-17:** Docker single-node 4.14.5 on
+      the Arch laptop. Docker data-root + containerd root both moved to `/home` (ext4, ~129 GB
+      free) so images/volumes stay off the cramped 32 GB `/`. Dashboard at `https://192.168.1.50`
+      (static IP), indexer (cluster green), and the dashboard->manager API connection all verified
+      up; stack set to `restart: always` and `docker.service` enabled, so it survives reboot.
+      Default credentials rotated (login `admin`; internal API password kept strong). Full
+      step-by-step + 7-incident troubleshooting log: `docs/Server_Rebuild_Journal_2026-06-17.md`.
+      Build log on the laptop: `~/wazuh-build.log`.
 
 ---
 
 ## What Is In Progress
 
-- [ ] Step 0: Rebuild Wazuh server (Docker on Arch laptop) per `docs/Server_Migration_Runbook.md`
-- [ ] Re-enroll agents -- gate: dashboard reachable, >=2 agents Active
+- [ ] Re-enroll agents -- gate: dashboard reachable (DONE), >=2 agents Active (pending)
 - [ ] Raspberry Pi 4 setup -- Suricata + Wazuh agent (target: June 21)
 - [ ] Phase 3: Signature project attack chain (see `docs/Signature_Project_Detection_Gap.md`)
 
