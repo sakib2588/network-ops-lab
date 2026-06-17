@@ -54,7 +54,7 @@ The lab runs on real personal hardware. `zbook-arch` and the Pop!_OS side of the
 | Device | Role | Specs | Status |
 |---|---|---|---|
 | 12 GB Laptop (Arch) | Wazuh Server (SIEM), Docker 4.14.5, `192.168.1.50` | 12GB RAM, always-on | **Active** |
-| `zbook-arch` (HP ZBook, Arch) | Linux Agent + auditd | 31GB RAM, `192.168.1.108` | **Active** |
+| `zbook-arch` (HP ZBook, Arch) | Linux Agent + auditd | 32GB RAM, `192.168.1.108` | **Active** |
 | `popos-mainpc` — dual-boot box, Pop!_OS 24.04 side | Linux Agent + auditd | 16GB RAM, `192.168.1.105`, always-on | **Active** |
 | `popos-mainpc` — Windows 10 side (same machine) | Windows Agent | booted into Windows 10 | Planned |
 | `rpi-sensor` (Raspberry Pi 4) | Network Sensor (Suricata 6.0.1) + Agent | 4GB RAM, `192.168.1.104` | **Active** |
