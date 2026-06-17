@@ -55,7 +55,7 @@
 
 - [ ] Fan out the last agent (`pc2-win10`) -- optional extra coverage; the gate is long met (now 3/3 nodes Active). NOTE: the earlier-planned `pc1-ubuntu` was the same physical box as `popos-mainpc` (Pop!_OS = Ubuntu-based, 16 GB) -- not a separate node.
 - [x] **Raspberry Pi 4 setup -- DONE 2026-06-17** (ahead of the June 21 target): Suricata + Wazuh agent live on `rpi-sensor`. See Phase 7 below.
-- [ ] Phase 3: Signature project attack chain (see `docs/Signature_Project_Detection_Gap.md`)
+- [~] Phase 3: Threat simulation -- **attacker VM built 2026-06-17** (minimal Arch `zeno` / `ultron` / `192.168.1.106`, bridged, SSH-driven from the laptop; tools: nmap/hydra/hping3/tcpdump/scapy). Next: first nmap -> Suricata-detects test against the Pi, then the full attack chain (see `phases/phase3_threat_simulation/Attacker_VM_and_Phase3_Kickoff.md` and `docs/Signature_Project_Detection_Gap.md`)
 
 ---
 

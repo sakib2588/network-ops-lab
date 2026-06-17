@@ -193,6 +193,47 @@ the most problems - every one below was hit live and fixed.
 
 ---
 
+## Phase 3 prep: Attacker VM (minimal Arch on VirtualBox)
+
+Full setup: `phases/phase3_threat_simulation/Attacker_VM_and_Phase3_Kickoff.md`. Built 2026-06-17
+(Arch VM `zeno` / user `ultron` / `192.168.1.106`). Pitfalls hit:
+
+**A1 - Clipboard paste dead in the VirtualBox console.**
+- Symptom: cannot paste commands into the VM's text console.
+- Cause: no Guest Additions + it is a raw TTY (no GUI); VBox clipboard sharing only works into a
+  graphical session.
+- Fix: do not fight it - get SSH up and drive the VM from the laptop terminal (paste works there).
+
+**A2 - VM got a NAT IP `10.0.2.15`, unreachable from the laptop.**
+- Symptom: `ip -br a` in the VM showed `10.0.2.15/24`; laptop SSH could not reach it.
+- Cause: Adapter 1 was on NAT (10.0.2.x is VBox's NAT range), not Bridged.
+- Fix: power off, Settings -> Network -> Adapter 1 -> **Bridged Adapter -> enp6s0** (the laptop's
+  active interface) -> the VM got `192.168.1.106` on the real LAN.
+- Lesson: an attacker needs to be a real LAN citizen - always Bridged, never NAT.
+
+**A3 - Minimal Arch profile ships no SSH.**
+- Symptom: `systemctl enable --now sshd` after install - service exists only if openssh is present.
+- Cause: the Minimal profile omits openssh/sudo/editor (the Server profile would include sshd).
+- Fix: `sudo pacman -S openssh` then `sudo systemctl enable --now sshd` (installing the package does
+  not start the service).
+
+**A4 - sshd `active` but port 22 still closed from outside.**
+- Symptom: `systemctl is-active sshd` = active, sshd listening on `0.0.0.0:22`, yet the laptop's
+  `ssh` was refused and a TCP probe showed 22 closed.
+- Cause: **ufw** was enabled and blocking inbound 22 by default.
+- Fix: `sudo ufw allow ssh` (then `ss -tlnp | grep :22` confirms the listener; external probe opens).
+- Lesson: "service active + listening" still fails if a host firewall drops the port - check ufw.
+
+**A5 - bridging to the wrong NIC = no network.**
+- Cause: bridging to an interface that is not the host's active connection.
+- Fix: `ip -br a` on the laptop -> bridge to whichever has the `192.168.1.x` IP (wired `enp6s0`
+  here; use the `wlan` adapter if on Wi-Fi).
+
+**A6 - 64-bit guest refuses to boot ("VT-x not available").**
+- Fix: enable Virtualization / VT-x / SVM in the laptop BIOS/UEFI (needed for any 64-bit guest).
+
+---
+
 ## Cross-cutting lessons (apply on every machine)
 
 1. **Paste-mangling is real on this setup** - long/multi-line/chained commands break. Use single
