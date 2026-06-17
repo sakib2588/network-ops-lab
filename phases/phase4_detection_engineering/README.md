@@ -54,18 +54,25 @@ For each rule:
 
 | Rule | Validated in logtest | Attack that triggered it | Fired? (level) | Screenshot | Date |
 |---|---|---|---|---|---|
-| 100015 | ☐ | `nmap -sV -A` → Pi | ☐ | ☐ | |
-| 100016 | ☐ | `nmap -sS` → Pi | ☐ | ☐ | |
-| 100017 | ☐ | `hydra ssh` → target | ☐ | ☐ | |
-| 100018 | ☐ | hydra with one valid cred | ☐ | ☐ | |
-| 100019 | ☐ | `sudo cat /etc/shadow` on an agent | ☐ | ☐ | |
-| 100020 | ☐ | `nc -vz <pi> 5900` from attacker | ☐ | ☐ | |
+| 100015 | ✅ 06-17 | `nmap -sV -A` → Pi | ☐ | ☐ | |
+| 100016 | ✅ 06-17 | `nmap -sS` → Pi | ☐ | ☐ | |
+| 100017 | ✅ 06-17 | `hydra ssh` → target | ☐ | ☐ | |
+| 100018 | ✅ 06-17 | hydra with one valid cred | ☐ | ☐ | |
+| 100019 | ✅ 06-17 | `sudo cat /etc/shadow` on an agent | ☐ | ☐ | |
+| 100020 | ✅ 06-17 | `nc -vz <pi> 5900` from attacker | ☐ | ☐ | |
+
+> **Deploy + validation note (2026-06-17):** all 6 rules deployed to the live manager and
+> confirmed firing in `wazuh-logtest`. Five needed parent/field corrections vs the draft
+> (Suricata fields are root-level not `data.*`; sshd valid-user failures are `5760`; brute
+> force chains off `5712`/`5763`; auditd parent is `80700`; Suricata correlation uses
+> `same_field`). Full failure-and-fix write-up: `../../docs/Detection_Engineering_Journal_2026-06-17.md`.
+> The `Fired? / Screenshot` columns stay open until a live Phase 3 attack proves each on the dashboard.
 
 ---
 
 ## Done when
 
-- [ ] All 6 rules validate clean in `wazuh-logtest` (parent ids + fields confirmed).
+- [x] All 6 rules validate clean in `wazuh-logtest` (parent ids + fields confirmed).
 - [ ] Each rule has at least one screenshot of it firing at the intended level.
 - [ ] The results table above is fully filled.
 - [ ] `PROJECT_STATUS.md` Phase 4 marked done and overall % bumped.

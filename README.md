@@ -92,6 +92,8 @@ cyber-security-soc-lab/
 │   ├── SOC_Lab_Project_Plan.md        ← master plan (full timeline)
 │   ├── Server_Migration_Runbook.md    ← rebuild the Wazuh server (Docker on Arch)
 │   ├── Signature_Project_Detection_Gap.md  ← the focused detection-gap case study
+│   ├── Server_Rebuild_Journal_2026-06-17.md       ← Step 0 build log: every failure + fix
+│   ├── Detection_Engineering_Journal_2026-06-17.md ← Phase 4 rule deploy/validate: every failure + fix
 │   ├── guides/
 │   │   ├── Blue_Team_Home_Lab_Guide.md
 │   │   ├── Blue_Team_Lab_Phases_2-7_Complete_Guide.md
@@ -136,5 +138,5 @@ Directly targeted at: **SOC Analyst**, **Security Analyst**, **Junior Cybersecur
 - Custom detection rules: `rules/local_rules.xml` · Phase 4 workflow: `phases/phase4_detection_engineering/README.md`
 - Incident reports: `incidents/` (PH3-001 nmap · PH3-002 brute force · PH3-003 stealth-scan gap)
 - RPi sensor (as-built): `phases/phase7_raspberry_pi/Phase7_Suricata_LIVE_Runbook.md`
-- Server rebuild journal: `docs/Server_Rebuild_Journal_2026-06-17.md`
+- Build journals (failures + fixes): `docs/Server_Rebuild_Journal_2026-06-17.md` · `docs/Detection_Engineering_Journal_2026-06-17.md`
 - Quick Commands: `docs/guides/Quick_Command_Reference.md`
