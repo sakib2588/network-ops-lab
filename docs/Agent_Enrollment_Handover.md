@@ -280,3 +280,28 @@ Renaming = remove + re-enroll with the new name (names cannot be edited in place
 - Verify on server: `sudo docker exec single-node-wazuh.manager-1 /var/ossec/bin/agent_control -l`
 - Suggested names: `popos-mainpc`, `pc1-ubuntu`, `pc2-win10`, `zbook-arch`, `rpi-sensor`
 - Golden rule: canary first, confirm Connected in the agent log, then fan out.
+
+---
+
+## 13. Field notes from real enrollments
+
+### `zbook-arch` (HP ZBook, Arch) - enrolled 2026-06-17 (canary, Section 4 validated)
+
+Worked end to end; AUR `wazuh-agent` was exactly `4.14.5-1` (= manager, no P2 issue).
+`agent-auth` returned "Valid key received", service went Active, ESTABLISHED TCP to
+`192.168.1.50:1514`, green on the dashboard. Three things that bit during the process - avoid
+them on the remaining agents:
+
+1. **AUR build via `yay` choked on interactive prompts** (cleanBuild / diff / edit) when run
+   through a non-interactive wrapper - it hit EOF and aborted. Fix: pre-answer them:
+   `yay -S --needed --noconfirm --answerclean None --answerdiff None --answeredit None wazuh-agent`.
+2. **Long one-liner `sudo sh -c '...'` got line-wrap-mangled on paste** - the terminal inserted
+   real newlines mid-command, so `sed` got an empty script and everything downstream failed with
+   "command not found". Fix: put the steps in a small script file and run `sudo sh /path/script.sh`
+   instead of pasting a long chained command. Also: **one `sudo` (a single root shell) = one
+   fingerprint prompt**; many chained `sudo`s each re-prompt and the fingerprint timeouts compound.
+3. **`gdb-add-index ... No debugging symbols` spam during the build is harmless** - it is just the
+   optional `wazuh-agent-debug` package failing to index; the agent itself installs fine.
+
+Post-enroll: node is "Active but quiet" until log sources are added (P10) - enable `auditd`
+(`sudo pacman -S --needed audit && sudo systemctl enable --now auditd`) for command/sudo telemetry.

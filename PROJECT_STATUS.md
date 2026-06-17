@@ -1,8 +1,8 @@
 # Project Status — Wazuh SOC Home Lab
 
 **Last updated:** 2026-06-17  
-**Current phase:** Server rebuilt (Step 0 server-side done) — next: re-enroll agents, then Phase 3 + Phase 7 (RPi)  
-**Overall completion:** ~35% (Wazuh server live on the Arch laptop; agents not yet enrolled)
+**Current phase:** Server live + first agent enrolled — next: enroll a 2nd agent (gate), then Phase 3 + Phase 7 (RPi)  
+**Overall completion:** ~40% (Wazuh server live; 1 of >=2 agents Active)
 
 > **Reality check:** the original Wazuh server (VirtualBox VM) is gone. As of 2026-06-17 the
 > server is **rebuilt and live** as Docker single-node (Wazuh 4.14.5) on the 12 GB Arch laptop
@@ -25,12 +25,17 @@
       Default credentials rotated (login `admin`; internal API password kept strong). Full
       step-by-step + 7-incident troubleshooting log: `docs/Server_Rebuild_Journal_2026-06-17.md`.
       Build log on the laptop: `~/wazuh-build.log`.
+- [x] **Agent 1 enrolled 2026-06-17 — `zbook-arch`:** the HP ZBook (Arch Linux, 31 GB, IP
+      192.168.1.108). Installed `wazuh-agent 4.14.5-1` from the AUR (matches manager version),
+      pointed at `192.168.1.50`, registered via `agent-auth` ("Valid key received"). Service
+      Active, ESTABLISHED TCP to `192.168.1.50:1514`, visible green on the dashboard. Field
+      notes (the gotchas that actually bit) appended to `docs/Agent_Enrollment_Handover.md`.
 
 ---
 
 ## What Is In Progress
 
-- [ ] Re-enroll agents -- gate: dashboard reachable (DONE), >=2 agents Active (pending)
+- [ ] Re-enroll agents -- gate: dashboard reachable (DONE), >=2 agents Active (1/2: `zbook-arch` Active; need 1 more)
 - [ ] Raspberry Pi 4 setup -- Suricata + Wazuh agent (target: June 21)
 - [ ] Phase 3: Signature project attack chain (see `docs/Signature_Project_Detection_Gap.md`)
 
