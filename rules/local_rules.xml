@@ -38,8 +38,8 @@
        ===================================================================== -->
   <rule id="100015" level="12">
     <if_sid>86601</if_sid>
-    <field name="data.alert.signature" type="pcre2">(?i)ET SCAN|Nmap</field>
-    <description>Network scan detected and escalated (Suricata ET SCAN / Nmap) from $(data.src_ip)</description>
+    <field name="alert.signature" type="pcre2">(?i)ET SCAN|Nmap</field>
+    <description>Network scan detected and escalated (Suricata ET SCAN / Nmap) from $(src_ip)</description>
     <mitre>
       <id>T1046</id>
     </mitre>
@@ -55,8 +55,8 @@
        ===================================================================== -->
   <rule id="100016" level="12" frequency="8" timeframe="60">
     <if_matched_sid>100015</if_matched_sid>
-    <same_source_ip />
-    <description>Scan BURST from a single source (possible stealth/SYN sweep) from $(data.src_ip)</description>
+    <same_field>src_ip</same_field>
+    <description>Scan BURST from a single source (possible stealth/SYN sweep) from $(src_ip)</description>
     <mitre>
       <id>T1046</id>
     </mitre>
@@ -68,13 +68,16 @@
        Finding: the Pi exposes SSH (22). Wazuh's built-in 5710/5716 are individual
        auth failures; 5712 is the stock brute-force composite. This re-rates a sustained
        failure burst to a high-severity, MITRE-tagged alert the SOC view surfaces.
-       Confirm parent: 5716 = "sshd: authentication failed" (wazuh-logtest).
+       CONFIRMED via wazuh-logtest (4.14.5): invalid-user failures escalate to the built-in
+       composite 5712, valid-user failures to 5763. This rule re-rates EITHER built-in
+       brute-force detection to a high-severity, MITRE-tagged alert. (An earlier draft used
+       if_matched_group authentication_failed, which did not accumulate in this version —
+       chaining off the built-in composite is the reliable construction.)
        MITRE T1110 (Brute Force).
        ===================================================================== -->
-  <rule id="100017" level="12" frequency="6" timeframe="120">
-    <if_matched_sid>5716</if_matched_sid>
-    <same_source_ip />
-    <description>SSH brute force — 6+ failed logins in 120s from $(srcip)</description>
+  <rule id="100017" level="12">
+    <if_sid>5712, 5763</if_sid>
+    <description>SSH brute force — multiple failed logins (built-in composite) from $(srcip)</description>
     <mitre>
       <id>T1110</id>
     </mitre>
@@ -86,10 +89,11 @@
        The dangerous case: brute force that then SUCCEEDS. Fires only when a successful
        login (5715) follows rule 100017 from the same source — a likely account takeover.
        Highest severity in this set. MITRE T1110 + T1078 (Valid Accounts).
-       ===================================================================== -->
-  <rule id="100018" level="14">
+       Keyed off 5760 (valid-user failures) — the only path that can precede a real success:
+       brute-forcing an EXISTING account then logging in. Confirmed firing via wazuh-logtest. -->
+  <rule id="100018" level="14" frequency="5" timeframe="120">
     <if_sid>5715</if_sid>
-    <if_matched_sid>100017</if_matched_sid>
+    <if_matched_sid>5760</if_matched_sid>
     <same_source_ip />
     <description>SSH login SUCCEEDED right after a brute-force burst — possible compromise from $(srcip)</description>
     <mitre>
@@ -104,13 +108,14 @@
        The agents run auditd with -w watches on /etc/shadow, /etc/sudoers, /etc/passwd.
        Set the watch key (-k identity) so the decoder exposes audit.key. Any write/access
        to these = credential-theft / persistence signal.
-       Parent 2902 = auditd syscall rule (confirm with wazuh-logtest).
+       Parent 80700 = Wazuh's grouped-auditd rule (CONFIRMED via wazuh-logtest 4.14.5; the
+       earlier "2902" guess was wrong). audit.key is exposed when the watch sets -k.
        MITRE T1003 (Credential Access) / T1098 (Account Manipulation).
        ===================================================================== -->
   <rule id="100019" level="12">
-    <if_sid>2902</if_sid>
+    <if_sid>80700</if_sid>
     <field name="audit.key" type="pcre2">(?i)identity|shadow|sudoers|passwd</field>
-    <description>Sensitive identity file accessed/modified ($(audit.file.name)) by uid $(audit.auid)</description>
+    <description>Sensitive identity file accessed/modified ($(audit.directory.name)) — auditd key $(audit.key)</description>
     <mitre>
       <id>T1003</id>
       <id>T1098</id>
@@ -127,8 +132,8 @@
        ===================================================================== -->
   <rule id="100020" level="10">
     <if_sid>86601</if_sid>
-    <field name="data.dest_port">5900</field>
-    <description>Connection to exposed VNC service (5900) on the sensor from $(data.src_ip)</description>
+    <field name="dest_port">5900</field>
+    <description>Connection to exposed VNC service (5900) on the sensor from $(src_ip)</description>
     <mitre>
       <id>T1021.005</id>
     </mitre>

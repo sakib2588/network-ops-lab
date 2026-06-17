@@ -57,7 +57,16 @@
       (`phases/phase3_threat_simulation/NEXT_SESSION_RUNBOOK.md`). README architecture diagram +
       inventory rebuilt to current reality (3 Active agents + attacker; Pi shown as both Suricata
       sensor AND host agent; dual-boot box = Pop!_OS Linux agent now, Windows agent planned on the
-      same machine). Rules are written but NOT yet deployed/proven — that is the next step.
+      same machine).
+- [x] **Phase 4 rules DEPLOYED + logtest-validated 2026-06-17:** all 6 rules (100015-100020)
+      copied to `/var/ossec/etc/rules/local_rules.xml` on `single-node-wazuh.manager-1`,
+      manager restarted, every rule confirmed firing in `wazuh-logtest`. Deploy surfaced and
+      fixed several field/parent mismatches vs the drafted version (Suricata fields are root-
+      level `src_ip`/`dest_port`/`alert.signature`, NOT `data.*`; sshd valid-user failures are
+      `5760` not `5716` so brute force chains off built-in composites `5712`/`5763`; auditd
+      parent is `80700` not `2902`; Suricata correlation uses `same_field` since it has no
+      `srcip`). **Still NOT proven by a live agent attack on the dashboard** — that is Phase 3
+      (hydra / stealth-scan / VNC probe).
 
 ---
 
@@ -87,7 +96,7 @@ Target: June 28, 2026 (2 weeks)
 
 | Phase | Target Date | Key Deliverable | Status |
 |---|---|---|---|
-| Phase 4: Detection Engineering | July 18 | 5+ custom Wazuh rules written, deployed, proven firing | 🟡 6 rules drafted (PR #9); deploy + prove pending |
+| Phase 4: Detection Engineering | July 18 | 5+ custom Wazuh rules written, deployed, proven firing | 🟡 6 rules deployed + logtest-validated; live-fire on dashboard pending |
 | Phase 5: Investigation Playbooks | Aug 1 | 3 incident reports done | 🟡 1 done (PH3-001), 2 drafted (PH3-002/003) |
 | Phase 6: Portfolio + GitHub | Aug 20 | Public GitHub repo ready | 🟡 README + diagram refreshed; screenshots pending |
 | Phase 7: RPi Network Sensor | June 21 | Suricata live on `rpi-sensor`, alerts in Wazuh (host + network) | ✅ DONE 2026-06-17 |
