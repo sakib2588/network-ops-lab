@@ -30,13 +30,17 @@ top to bottom, one machine at a time.
 
 | # | Machine | OS | CPU arch | Install method | Suggested agent name |
 |---|---|---|---|---|---|
-| 1 | Pop!_OS main PC | Pop!_OS (Ubuntu base) | x86_64 | `.deb` amd64 | `popos-mainpc` |
-| 2 | PC1 (16 GB) | Ubuntu | x86_64 | `.deb` amd64 | `pc1-ubuntu` |
-| 3 | PC2 (4 GB) | Windows 10 | x86_64 | `.msi` | `pc2-win10` |
-| 4 | HP ZBook (32 GB) | Arch Linux | x86_64 | AUR (`wazuh-agent`) | `zbook-arch` |
-| 5 | Raspberry Pi 4 | RPi OS / Ubuntu | **aarch64 (ARM)** | `.deb` **arm64** | `rpi-sensor` |
+| 1 | Main PC (16 GB) | Pop!_OS 24.04 (Ubuntu base) | x86_64 | `.deb` amd64 | `popos-mainpc` |
+| 2 | PC2 (4 GB) | Windows 10 | x86_64 | `.msi` | `pc2-win10` |
+| 3 | HP ZBook (32 GB) | Arch Linux | x86_64 | AUR (`wazuh-agent`) | `zbook-arch` |
+| 4 | Raspberry Pi 4 | RPi OS / Ubuntu | **aarch64 (ARM)** | `.deb` **arm64** | `rpi-sensor` |
 
-The Pi (5) is also the Suricata network sensor (Phase 7); its agent setup is the same as any
+> **Correction (2026-06-17):** an earlier draft listed a separate node `pc1-ubuntu` (PC1, 16 GB
+> Ubuntu). That was NOT a second machine - it is the **same physical box** as `popos-mainpc`
+> (Pop!_OS is Ubuntu-based, 16 GB RAM). The duplicate has been removed; there is no `pc1-ubuntu`.
+> Real lab = `popos-mainpc`, `pc2-win10`, `zbook-arch`, `rpi-sensor`, plus the server.
+
+The Pi (4) is also the Suricata network sensor (Phase 7); its agent setup is the same as any
 Linux box plus a log-forward step (Section 6).
 
 **Confirm the CPU arch before downloading** - run `uname -m` on the target:
@@ -59,7 +63,7 @@ supported; an agent NEWER than the manager is not (Pitfall P2). Pin the version 
 
 ---
 
-## 3. Linux: Debian / Ubuntu / Pop!_OS (machines 1, 2)
+## 3. Linux: Debian / Ubuntu / Pop!_OS (machine 1)
 
 Run on the target machine (needs sudo + internet). Replace the name per machine.
 
@@ -278,7 +282,7 @@ Renaming = remove + re-enroll with the new name (names cannot be edited in place
 
 - Server IP: `192.168.1.50`  - Ports: `1514` (data), `1515` (enroll)  - Version: `4.14.5`
 - Verify on server: `sudo docker exec single-node-wazuh.manager-1 /var/ossec/bin/agent_control -l`
-- Suggested names: `popos-mainpc`, `pc1-ubuntu`, `pc2-win10`, `zbook-arch`, `rpi-sensor`
+- Suggested names: `popos-mainpc`, `pc2-win10`, `zbook-arch`, `rpi-sensor`
 - Golden rule: canary first, confirm Connected in the agent log, then fan out.
 
 ---
@@ -305,6 +309,85 @@ them on the remaining agents:
 
 Post-enroll: node is "Active but quiet" until log sources are added (P10) - enable `auditd`
 (`sudo pacman -S --needed audit && sudo systemctl enable --now auditd`) for command/sudo telemetry.
+
+### `popos-mainpc` (Pop!_OS 24.04 main PC, amd64) - enrolled 2026-06-17 (Section 3 / Debian-family validated)
+
+Always-on main PC (16 GB, IP 192.168.1.105; this is the box an earlier draft mis-listed as a
+separate `pc1-ubuntu` - same machine, now merged). Installed `wazuh-agent 4.14.5-1` from the amd64
+`.deb` with `WAZUH_MANAGER` / `WAZUH_AGENT_NAME` baked in (Section 3 method). Ended Active,
+ESTABLISHED TCP to `192.168.1.50:1514` (verified stable - byte counters climbing and acked, ~12 MB
+shipped), green on the dashboard. Five things that bit - avoid them on the remaining agents:
+
+1. **Stale OLD-server IP lurking in `ossec.conf` (this box ran the decommissioned VM lab).** It
+   enrolled to `192.168.1.50` fine, but a later `systemctl restart` reverted the target to the old
+   `192.168.1.10` and it fell into a connect/close loop (no "Connected" line, no hard error). Fix:
+   force every address with
+   `sudo sed -i 's#<address>[^<]*</address>#<address>192.168.1.50</address>#g' /var/ossec/etc/ossec.conf`
+   then restart. Lesson (P3/P5): on any machine that ran the old VM lab, confirm `<address>` both
+   after install AND after the first restart.
+2. **`sudo` has no password channel through any non-interactive path.** Neither an automation
+   wrapper, nor a `!`-prefixed command, nor `pkexec` surfaced a prompt (no TTY / no polkit agent
+   reachable), so every `sudo` silently failed with "a terminal is required to read the password".
+   Fix: run all `sudo` steps in a real terminal window (paste with Ctrl+Shift+V).
+3. **Long chained one-liners line-wrap-mangle on paste** (same failure as note 2 under zbook). A
+   `printf ... | sudo tee -a ...` got split mid-pipe, so the redirect ran as the normal user ->
+   "Permission denied"; `sudo apt-get` + `update` split across lines -> "update: command not found".
+   Fix: single unbroken lines, or put steps in a script file.
+4. **`apt` was wedged before anything could install** - the MEGA repo was declared twice
+   (`/etc/apt/sources.list.d/mega.list` AND `megaio.sources`) with two different `Signed-By` keys,
+   so apt refused every operation ("Conflicting values set for option Signed-By"). Fix: disable one
+   (`sudo mv /etc/apt/sources.list.d/mega.list /etc/apt/sources.list.d/mega.list.disabled`), then
+   `sudo apt-get update` is clean. Worth checking on any box before relying on apt.
+5. **Made non-quiet (P10):** `sudo apt-get install -y auditd audispd-plugins`, then add an audit
+   localfile to `ossec.conf` (`<log_format>audit</log_format>` +
+   `<location>/var/log/audit/audit.log</location>`) and restart. Verify it is shipping by watching
+   the data socket counters grow (`ss -tin | grep 192.168.1.50:1514`) or by checking the agent's
+   events on the dashboard. This box already carried a rich audit ruleset (exec / network /
+   identity / sudoers / sshd); a fresh box needs rules added.
+
+### `rpi-sensor` (Raspberry Pi 4, aarch64) - enrolled 2026-06-17 (Section 6 + Phase 7 sensor)
+
+Raspberry Pi 4, Raspberry Pi OS / Debian 11 (bullseye), IP 192.168.1.104 over **Wi-Fi `wlan0`**
+(eth0 was `NO-CARRIER` - cable/port not linking; deferred, Wi-Fi is fine for own-traffic
+monitoring). Clean box (no prior agent). Installed `wazuh-agent 4.14.5-1` from the **arm64** `.deb`
+with `WAZUH_MANAGER` / `WAZUH_AGENT_NAME` baked in; came up Active, "Connected to the server
+(192.168.1.50:1514)", manager pushed shared config. Agent side was painless - the real fight was
+Phase 7 (Suricata). Things that bit, with fixes:
+
+1. **eth0 dead, not a config bug.** `ip link show eth0` = `<NO-CARRIER>` even with the jack LEDs
+   lit. That is layer-1 (no link partner) - DHCP cannot fix it. Don't chase it; capture on `wlan0`.
+   Wi-Fi can't go promiscuous (can't sniff *other* hosts), but for Option-A (attacks generated
+   *from* the Pi) it sees its own traffic fine. Full passive LAN visibility needs a wired SPAN/TAP/
+   inline-bridge upgrade later.
+2. **Install Suricata from the Debian repo, NOT the OISF PPA** (PPAs are Ubuntu-only and fail on
+   Pi OS). `sudo apt install suricata` gives 6.0.1 - fine.
+3. **The big one - Debian rule-path mismatch -> 0 rules loaded -> 0 alerts.** `suricata-update`
+   writes the ruleset to `/var/lib/suricata/rules/suricata.rules`, but the stock `suricata.yaml`
+   has `default-rule-path: /etc/suricata/rules` (empty). Result: engine runs, captures perfectly
+   (verified `iface-stat`: pkts rising, 0 drops), but `detect.rules_loaded: 0` and never alerts.
+   Fix: `sudo sed -i 's|^default-rule-path:.*|default-rule-path: /var/lib/suricata/rules|'
+   /etc/suricata/suricata.yaml` then restart. Confirm with `... rules successfully loaded` (~50685)
+   in `suricata.log`, not 0.
+4. **Set the capture interface in BOTH `suricata.yaml` (af-packet) AND `/etc/default/suricata`
+   (`IFACE`/`LISTENMODE=af-packet`)** - mismatch = listens on the wrong NIC, silent.
+5. **The `testmynids` curl test is a false negative.** Its rule (sid 2100498) lives in
+   `emerging-deleted.rules`, which `suricata-update` skips - so the classic test never alerts even
+   when Suricata is healthy. Prove the pipeline with a **local test rule** instead:
+   `echo 'alert icmp any any -> any any (msg:"LOCAL PING TEST"; sid:9000001; rev:1;)' | sudo tee -a
+   /var/lib/suricata/rules/suricata.rules`, reload (`sudo suricatasc -c reload-rules`), `ping`, and
+   it fires. **Remove that rule afterwards** (`sudo sed -i '/LOCAL PING TEST/d' .../suricata.rules`)
+   - it alerts on every ping and will spam the SIEM.
+6. **Forward into Wazuh:** add a `<localfile><log_format>json</log_format><location>
+   /var/log/suricata/eve.json</location></localfile>` block to `ossec.conf` (single-line `printf |
+   sudo tee -a` to avoid paste-mangling), restart `wazuh-agent`, confirm `Analyzing file:
+   '/var/log/suricata/eve.json'` in `ossec.log`, then verify on the dashboard with
+   `data.alert.signature:"LOCAL PING TEST"` filtered to `agent.name:rpi-sensor`.
+
+Result: host + network detection both feeding the SIEM. Disk hygiene matters on the Pi's SD card -
+see the Phase 7 runbook (logrotate, capped pcaps, watch `df -h /`). Full as-built walkthrough:
+`phases/phase7_raspberry_pi/Phase7_Suricata_LIVE_Runbook.md`.
+
+### `zbook-arch` telemetry (2026-06-17)
 
 **Telemetry enabled on `zbook-arch` (2026-06-17).** `auditd` installed + enabled, with rules in
 `/etc/audit/rules.d/wazuh-soc.rules`:
