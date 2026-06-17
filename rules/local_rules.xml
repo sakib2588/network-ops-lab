@@ -1,36 +1,138 @@
 <!--
-  Wazuh custom rules for the SOC lab.
+  Wazuh custom detection rules — SOC lab (Nazmus Sakib)
 
-  This file mirrors what you put in /var/ossec/etc/rules/local_rules.xml on the manager,
-  so the GitHub artifact shows your detection engineering work.
+  Repo copy of /var/ossec/etc/rules/local_rules.xml on the manager. Keeping it here is
+  what makes the detection-engineering work visible in the GitHub portfolio.
 
-  ID range: custom rules use 100000+. The examples in
-  docs/guides/Blue_Team_Home_Lab_Guide.md (Section 4) already use 100001-100014,
-  so START YOUR RULES AT 100015 to avoid an ID collision.
+  ID RANGE: custom rules use 100000+. The worked examples in
+  docs/guides/Blue_Team_Home_Lab_Guide.md (Section 4) occupy 100001-100014, so these
+  START AT 100015 to avoid an ID collision.
 
-  Syntax reference (do not reinvent): docs/guides/Blue_Team_Home_Lab_Guide.md Section 4.2.
-  Validate every rule with: sudo /var/ossec/bin/wazuh-logtest
+  EACH RULE BELOW IS DRIVEN BY A REAL FINDING from incidents/phase3_threat_sim_report.md:
+    - the nmap scan fired Suricata Priority 1 but produced ZERO Wazuh Level-12+ alerts
+    - detection leaned on the HTTP user-agent, so a stealth -sS scan would be quieter
+    - the Pi exposes SSH (22) and VNC (5900) — brute force and lateral targets
 
-  The block below is a TEMPLATE, not a live rule. Fill it in during Step 3 of
-  docs/Signature_Project_Detection_Gap.md, after Step 2 tells you which technique is
-  logged but not alerted by default. Read the parent rule id and the decoded field names
-  from wazuh-logtest before you set <if_sid> and <field>.
+  DEPLOY PROCEDURE (do not skip):
+    1. Back up first — a syntax error stops the manager and takes the dashboard down:
+       sudo cp /var/ossec/etc/rules/local_rules.xml /var/ossec/etc/rules/local_rules.xml.bak
+    2. Copy this file's <rule> blocks into the live file.
+    3. CONFIRM every <if_sid> parent id and every <field> name against your own logs with:
+       sudo /var/ossec/bin/wazuh-logtest
+       (paste a real Suricata eve line / a real sshd failure line and read the rule id +
+        decoded field names it reports — the ids below are the Wazuh defaults but YOUR
+        ruleset version is the source of truth).
+    4. Restart the manager: sudo systemctl restart wazuh-manager  (or the Docker equivalent:
+       docker exec -it single-node-wazuh.manager-1 /var/ossec/bin/wazuh-control restart)
+    5. Re-run the matching attack and confirm the rule fires at the new level on the dashboard.
 -->
 <group name="local,soc_lab,">
 
-  <!--
-    TEMPLATE: detection for the gap found in Step 2 (e.g. sudo access to a sensitive file).
-    Technique: T1548.003 (Sudo and Sudo Caching); adjust to your actual finding.
-
-  <rule id="100015" level="10">
-    <if_sid>PARENT_RULE_ID</if_sid>            // set to the rule id wazuh-logtest reports
-    <field name="DECODED_FIELD">PATTERN</field> // match only a field the decoder produced
-    <description>Sensitive file access via sudo detected (T1548.003)</description>
+  <!-- =====================================================================
+       RULE 100015 — Network scan escalated to high severity
+       Finding: nmap -sV -A fired Suricata "ET SCAN ... Nmap" (Priority 1) but the
+       mapped Wazuh level stayed moderate, so a Level-12+ view MISSED the scan.
+       Fix: re-rate any Suricata ET SCAN / Nmap signature to level 12.
+       Parent 86601 = Wazuh's generic Suricata-alert rule (confirm with wazuh-logtest).
+       MITRE T1046 (Network Service Discovery).
+       ===================================================================== -->
+  <rule id="100015" level="12">
+    <if_sid>86601</if_sid>
+    <field name="data.alert.signature" type="pcre2">(?i)ET SCAN|Nmap</field>
+    <description>Network scan detected and escalated (Suricata ET SCAN / Nmap) from $(data.src_ip)</description>
     <mitre>
-      <id>T1548.003</id>
+      <id>T1046</id>
     </mitre>
-    <group>attack,privilege_escalation,</group>
+    <group>attack,recon,scan,suricata,</group>
   </rule>
-  -->
+
+  <!-- =====================================================================
+       RULE 100016 — Stealth / quiet scan burst (the -sS gap)
+       Finding: detection leaned on the HTTP user-agent; a SYN-only scan is quieter.
+       Fix: catch volume — many scan/anomaly alerts from one source in a short window,
+       even when no single signature is loud. Composite on rule 100015.
+       frequency=8 in 60s = a burst, not a stray packet. MITRE T1046.
+       ===================================================================== -->
+  <rule id="100016" level="12" frequency="8" timeframe="60">
+    <if_matched_sid>100015</if_matched_sid>
+    <same_source_ip />
+    <description>Scan BURST from a single source (possible stealth/SYN sweep) from $(data.src_ip)</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>attack,recon,scan,suricata,</group>
+  </rule>
+
+  <!-- =====================================================================
+       RULE 100017 — SSH brute force escalated
+       Finding: the Pi exposes SSH (22). Wazuh's built-in 5710/5716 are individual
+       auth failures; 5712 is the stock brute-force composite. This re-rates a sustained
+       failure burst to a high-severity, MITRE-tagged alert the SOC view surfaces.
+       Confirm parent: 5716 = "sshd: authentication failed" (wazuh-logtest).
+       MITRE T1110 (Brute Force).
+       ===================================================================== -->
+  <rule id="100017" level="12" frequency="6" timeframe="120">
+    <if_matched_sid>5716</if_matched_sid>
+    <same_source_ip />
+    <description>SSH brute force — 6+ failed logins in 120s from $(srcip)</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>attack,authentication_failures,ssh,</group>
+  </rule>
+
+  <!-- =====================================================================
+       RULE 100018 — Successful SSH login AFTER a brute-force burst (compromise)
+       The dangerous case: brute force that then SUCCEEDS. Fires only when a successful
+       login (5715) follows rule 100017 from the same source — a likely account takeover.
+       Highest severity in this set. MITRE T1110 + T1078 (Valid Accounts).
+       ===================================================================== -->
+  <rule id="100018" level="14">
+    <if_sid>5715</if_sid>
+    <if_matched_sid>100017</if_matched_sid>
+    <same_source_ip />
+    <description>SSH login SUCCEEDED right after a brute-force burst — possible compromise from $(srcip)</description>
+    <mitre>
+      <id>T1110</id>
+      <id>T1078</id>
+    </mitre>
+    <group>attack,authentication_success,ssh,compromise,</group>
+  </rule>
+
+  <!-- =====================================================================
+       RULE 100019 — Sensitive identity file touched (auditd watch)
+       The agents run auditd with -w watches on /etc/shadow, /etc/sudoers, /etc/passwd.
+       Set the watch key (-k identity) so the decoder exposes audit.key. Any write/access
+       to these = credential-theft / persistence signal.
+       Parent 2902 = auditd syscall rule (confirm with wazuh-logtest).
+       MITRE T1003 (Credential Access) / T1098 (Account Manipulation).
+       ===================================================================== -->
+  <rule id="100019" level="12">
+    <if_sid>2902</if_sid>
+    <field name="audit.key" type="pcre2">(?i)identity|shadow|sudoers|passwd</field>
+    <description>Sensitive identity file accessed/modified ($(audit.file.name)) by uid $(audit.auid)</description>
+    <mitre>
+      <id>T1003</id>
+      <id>T1098</id>
+    </mitre>
+    <group>attack,credential_access,auditd,</group>
+  </rule>
+
+  <!-- =====================================================================
+       RULE 100020 — Inbound connection to exposed VNC (5900) on the sensor
+       Finding: the Pi scan exposed RealVNC on 5900 — a remote-control surface that
+       should be localhost-only. Alert on any Suricata flow to dest port 5900 so an
+       attempt to reach it is never silent. MITRE T1021.005 (VNC / Remote Services).
+       Adjust the field name to your eve schema (data.dest_port) via wazuh-logtest.
+       ===================================================================== -->
+  <rule id="100020" level="10">
+    <if_sid>86601</if_sid>
+    <field name="data.dest_port">5900</field>
+    <description>Connection to exposed VNC service (5900) on the sensor from $(data.src_ip)</description>
+    <mitre>
+      <id>T1021.005</id>
+    </mitre>
+    <group>attack,lateral_movement,vnc,suricata,</group>
+  </rule>
 
 </group>

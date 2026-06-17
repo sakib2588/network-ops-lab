@@ -16,28 +16,36 @@ Build a functional Security Operations Center (SOC) home lab using Wazuh SIEM, d
 
 ```mermaid
 flowchart TB
-    subgraph net["Home LAN (single subnet)"]
-        server["12 GB Laptop (Arch + Docker)<br/>Wazuh Server: Manager + Indexer + Dashboard<br/>always-on, static-reserved IP"]
-        pc1["16 GB PC (Ubuntu)<br/>Wazuh agent"]
-        pc2["4 GB PC (Windows 10)<br/>Wazuh agent"]
-        popos["Pop!_OS box<br/>Wazuh agent"]
-        pi["Raspberry Pi 4 (4 GB)<br/>Suricata network sensor + Wazuh agent"]
+    attacker["Attacker VM 'zeno' (Arch)<br/>192.168.1.106<br/>nmap · hydra · MITRE techniques"]
+    subgraph net["Home LAN — 192.168.1.0/24"]
+        server["Wazuh Server — 12 GB Laptop (Arch + Docker 4.14.5)<br/>Manager + Indexer + Dashboard<br/>192.168.1.50 · always-on"]
+        zbook["zbook-arch (HP ZBook, Arch)<br/>192.168.1.108 · Wazuh agent + auditd"]
+        subgraph dual["popos-mainpc — dual-boot box (192.168.1.105)"]
+            popos["Pop!_OS 24.04 side<br/>Wazuh agent + auditd"]
+            win["Windows 10 side (same machine)<br/>Wazuh agent — planned"]
+        end
+        pi["rpi-sensor — Raspberry Pi 4 (ARM edge)<br/>192.168.1.104<br/>Suricata 6.0.1 network sensor<br/>+ Wazuh agent (host telemetry)"]
     end
 
-    pc1 -- "host logs" --> server
-    pc2 -- "host logs" --> server
-    popos -- "host logs" --> server
-    pi -- "network alerts (eve.json)" --> server
+    attacker -. "attacks (scans / brute force)" .-> pi
+    zbook -- "host logs (auditd)" --> server
+    popos -- "host logs (auditd)" --> server
+    win -. "host logs (when booted to Windows)" .-> server
+    pi -- "host logs + network alerts (eve.json)" --> server
 
     classDef srv fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
     classDef agt fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
     classDef sensor fill:#fde2e2,stroke:#c0392b,stroke-width:2px,color:#5a1212
+    classDef atk fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#5a3a12
+    classDef planned fill:#f1f5f9,stroke:#64748b,stroke-width:2px,stroke-dasharray:5 4,color:#334155
     class server srv
-    class pc1,pc2,popos agt
+    class zbook,popos agt
     class pi sensor
+    class attacker atk
+    class win planned
 ```
 
-Host agents report endpoint logs; the Raspberry Pi runs Suricata for network-layer detection and forwards alerts to the same Wazuh server — two telemetry vantage points (host + network).
+The lab runs on real personal hardware. `zbook-arch` and the Pop!_OS side of the dual-boot box are Active Linux agents reporting endpoint telemetry via auditd; the Raspberry Pi additionally runs Suricata for network-layer detection and forwards `eve.json` alerts — two vantage points (host + network). The Windows agent comes from the **same dual-boot machine** booted into Windows 10 (planned, dashed). The `zeno` attacker VM generates real on-wire attacks against the sensor.
 
 ---
 
@@ -45,13 +53,14 @@ Host agents report endpoint logs; the Raspberry Pi runs Suricata for network-lay
 
 | Device | Role | Specs | Status |
 |---|---|---|---|
-| 12 GB Laptop (Arch) | Wazuh Server (SIEM), Docker | 12GB RAM, always-on | Rebuilding |
-| PC 1 (Ubuntu) | Linux Agent | 16GB RAM, dual-boot | Enroll fresh |
-| PC 2 | Windows Agent | 4GB RAM, Windows 10 | Enroll fresh |
-| Pop!_OS box | Linux Agent | — | Enroll fresh |
-| Raspberry Pi 4 | Network Sensor (Suricata) | 4GB RAM | Enroll fresh (Phase 7) |
+| 12 GB Laptop (Arch) | Wazuh Server (SIEM), Docker 4.14.5, `192.168.1.50` | 12GB RAM, always-on | **Active** |
+| `zbook-arch` (HP ZBook, Arch) | Linux Agent + auditd | 31GB RAM, `192.168.1.108` | **Active** |
+| `popos-mainpc` — dual-boot box, Pop!_OS 24.04 side | Linux Agent + auditd | 16GB RAM, `192.168.1.105`, always-on | **Active** |
+| `popos-mainpc` — Windows 10 side (same machine) | Windows Agent | booted into Windows 10 | Planned |
+| `rpi-sensor` (Raspberry Pi 4) | Network Sensor (Suricata 6.0.1) + Agent | 4GB RAM, `192.168.1.104` | **Active** |
+| `zeno` (Arch VM) | Attacker (offensive) | VirtualBox, `192.168.1.106` | **Active** |
 
-> The original Wazuh server (a VirtualBox VM) was decommissioned 2026-06-16; the lab is being rebuilt fresh on the always-home laptop via Docker. See `docs/Server_Migration_Runbook.md`.
+> The original Wazuh server (a VirtualBox VM) was decommissioned 2026-06-16 and **rebuilt 2026-06-17** as Docker single-node (Wazuh 4.14.5) on the always-home Arch laptop at `https://192.168.1.50` — dashboard, indexer (green), and 3 Active agents verified up. See `docs/Server_Rebuild_Journal_2026-06-17.md`.
 
 ---
 
@@ -61,14 +70,14 @@ Host agents report endpoint logs; the Raspberry Pi runs Suricata for network-lay
 |---|---|---|---|
 | Phase 0 | Environment Setup | Done | Done |
 | Phase 1 | Wazuh Deployment | Done | Done |
-| Phase 2 | Log Ingestion (4 nodes) | Done | Done |
-| Phase 3 | Threat Simulation | In Progress | June 28 |
-| Phase 4 | Detection Engineering | Not started | July 18 |
-| Phase 5 | Investigation Playbooks | Not started | Aug 1 |
-| Phase 6 | Portfolio Documentation | Not started | Aug 20 |
-| Phase 7 | Raspberry Pi — Network Sensor | In Progress | June 21 |
+| Phase 2 | Log Ingestion (3 nodes) | Done | Done |
+| Phase 3 | Threat Simulation | In Progress — first detection confirmed | June 28 |
+| Phase 4 | Detection Engineering | Rules drafted (6, in `rules/`); deploy + prove pending | July 18 |
+| Phase 5 | Investigation Playbooks | 1 report done, 2 drafted | Aug 1 |
+| Phase 6 | Portfolio Documentation | In Progress | Aug 20 |
+| Phase 7 | Raspberry Pi — Network Sensor | ✅ Done 2026-06-17 | June 21 |
 
-> RPi moved from Phase 7 to run in parallel with Phase 3 — device available now.
+> Phase 7 (RPi + Suricata) finished early, in parallel with Phase 3. Phase 4 custom rules are written and committed in `rules/local_rules.xml`; each needs to be deployed to the manager, validated with `wazuh-logtest`, and proven to fire — see `phases/phase4_detection_engineering/README.md`.
 
 ---
 
@@ -109,12 +118,12 @@ cyber-security-soc-lab/
 ## Portfolio Value
 
 This lab demonstrates:
-- Wazuh SIEM deployment and management
-- Multi-platform agent configuration (Linux + Windows)
-- Network-based intrusion detection (Suricata on RPi)
-- Custom detection rule writing (YAML/XML)
-- Incident investigation and playbook writing
-- Real threat simulation (nmap, hydra, Metasploit)
+- Wazuh SIEM deployment and management (Docker single-node, rebuilt from scratch)
+- Multi-host agent configuration with auditd host telemetry (3 Active Linux nodes; a Windows agent planned on the dual-boot box)
+- Network-based intrusion detection (Suricata on an ARM edge device, host + network vantage)
+- Custom detection-engineering: 6 MITRE-tagged Wazuh rules (XML), each tracing to a measured gap
+- Incident investigation and report writing (PH3-001 confirmed; PH3-002/003 in flight)
+- Real on-wire threat simulation (nmap recon, stealth-scan gap test, hydra SSH brute force)
 
 Directly targeted at: **SOC Analyst**, **Security Analyst**, **Junior Cybersecurity roles** in Bangladesh.
 
@@ -124,5 +133,8 @@ Directly targeted at: **SOC Analyst**, **Security Analyst**, **Junior Cybersecur
 
 - Master Plan: `docs/SOC_Lab_Project_Plan.md`
 - Current Status: `PROJECT_STATUS.md`
-- RPi Setup: `phases/phase7_raspberry_pi/RPi_Suricata_Setup.md`
+- Custom detection rules: `rules/local_rules.xml` · Phase 4 workflow: `phases/phase4_detection_engineering/README.md`
+- Incident reports: `incidents/` (PH3-001 nmap · PH3-002 brute force · PH3-003 stealth-scan gap)
+- RPi sensor (as-built): `phases/phase7_raspberry_pi/Phase7_Suricata_LIVE_Runbook.md`
+- Server rebuild journal: `docs/Server_Rebuild_Journal_2026-06-17.md`
 - Quick Commands: `docs/guides/Quick_Command_Reference.md`
