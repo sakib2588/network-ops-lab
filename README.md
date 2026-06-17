@@ -16,22 +16,22 @@ Build a functional Security Operations Center (SOC) home lab using Wazuh SIEM, d
 
 ```mermaid
 flowchart TB
-    attacker["Attacker VM 'zeno' (Arch)<br/>192.168.1.106<br/>nmap · hydra · MITRE techniques"]
-    subgraph net["Home LAN — 192.168.1.0/24"]
-        server["Wazuh Server — 12 GB Laptop (Arch + Docker 4.14.5)<br/>Manager + Indexer + Dashboard<br/>192.168.1.50 · always-on"]
-        zbook["zbook-arch (HP ZBook, Arch)<br/>192.168.1.108 · Wazuh agent + auditd"]
-        subgraph dual["popos-mainpc — dual-boot box (192.168.1.105)"]
+    attacker["Attacker VM zeno<br/>Arch, 192.168.1.106<br/>nmap, hydra, MITRE"]
+    subgraph net["Home LAN 192.168.1.0/24"]
+        server["Wazuh Server<br/>12 GB Laptop, Arch + Docker<br/>Manager, Indexer, Dashboard<br/>192.168.1.50, always-on"]
+        zbook["zbook-arch<br/>HP ZBook, Arch<br/>192.168.1.108<br/>Wazuh agent + auditd"]
+        subgraph dual["popos-mainpc dual-boot box, 192.168.1.105"]
             popos["Pop!_OS 24.04 side<br/>Wazuh agent + auditd"]
-            win["Windows 10 side (same machine)<br/>Wazuh agent — planned"]
+            win["Windows 10 side, same box<br/>Wazuh agent, planned"]
         end
-        pi["rpi-sensor — Raspberry Pi 4 (ARM edge)<br/>192.168.1.104<br/>Suricata 6.0.1 network sensor<br/>+ Wazuh agent (host telemetry)"]
+        pi["rpi-sensor<br/>Raspberry Pi 4, ARM edge<br/>192.168.1.104<br/>Suricata network sensor<br/>+ Wazuh agent, host"]
     end
 
-    attacker -. "attacks (scans / brute force)" .-> pi
-    zbook -- "host logs (auditd)" --> server
-    popos -- "host logs (auditd)" --> server
-    win -. "host logs (when booted to Windows)" .-> server
-    pi -- "host logs + network alerts (eve.json)" --> server
+    attacker -. "attacks" .-> pi
+    zbook -- "host logs" --> server
+    popos -- "host logs" --> server
+    win -. "host logs, Windows" .-> server
+    pi -- "host + network alerts" --> server
 
     classDef srv fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
     classDef agt fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a5f
