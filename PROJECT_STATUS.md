@@ -30,6 +30,9 @@
       pointed at `192.168.1.50`, registered via `agent-auth` ("Valid key received"). Service
       Active, ESTABLISHED TCP to `192.168.1.50:1514`, visible green on the dashboard. Field
       notes (the gotchas that actually bit) appended to `docs/Agent_Enrollment_Handover.md`.
+      Telemetry enabled (no longer "quiet"): `auditd` installed + enabled with 4 audit rules
+      (execve command exec, plus `wa` watches on sudoers/passwd/shadow), and `ossec.conf` set to
+      ingest `/var/log/audit/audit.log` so command-execution and identity events reach the SIEM.
 
 ---
 

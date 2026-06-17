@@ -305,3 +305,17 @@ them on the remaining agents:
 
 Post-enroll: node is "Active but quiet" until log sources are added (P10) - enable `auditd`
 (`sudo pacman -S --needed audit && sudo systemctl enable --now auditd`) for command/sudo telemetry.
+
+**Telemetry enabled on `zbook-arch` (2026-06-17).** `auditd` installed + enabled, with rules in
+`/etc/audit/rules.d/wazuh-soc.rules`:
+```
+-a always,exit -F arch=b64 -S execve -k exec     # every command execution
+-w /etc/sudoers -p wa -k sudoers                 # sudoers changes
+-w /etc/passwd  -p wa -k identity                # account changes
+-w /etc/shadow  -p wa -k identity                # credential changes
+```
+Then a `<localfile>` with `<log_format>audit</log_format>` pointing at `/var/log/audit/audit.log`
+was added to `ossec.conf` (backed up first) and the agent restarted, so these events reach the
+manager. Caveat: the unfiltered `execve` rule logs **every** command - chatty by design; if event
+volume stresses the server disk (P11), narrow it (e.g. add `-F auid>=1000` or scope to specific
+paths). Apply the same two steps (auditd + localfile) on the other Linux agents to avoid P10.
