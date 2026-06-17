@@ -1,8 +1,8 @@
 # Project Status — Wazuh SOC Home Lab
 
 **Last updated:** 2026-06-17  
-**Current phase:** Server live + 3 nodes enrolled incl. Phase 7 network sensor — next: Phase 3 threat sim, then detection engineering  
-**Overall completion:** ~50% (Wazuh server live; 3 nodes Active: `zbook-arch`, `popos-mainpc`, `rpi-sensor` — the last also a live Suricata network sensor)
+**Current phase:** Phase 3 threat simulation IN PROGRESS — first attacker→sensor→SIEM detection confirmed 2026-06-17; next: expand the attack chain, then Phase 4 detection engineering  
+**Overall completion:** ~55% (server + 3 nodes + Suricata network sensor all live; Phase 3 first detection done; attack chain, custom detections, and remaining incident reports still to do)
 
 > **Reality check:** the original Wazuh server (VirtualBox VM) is gone. As of 2026-06-17 the
 > server is **rebuilt and live** as Docker single-node (Wazuh 4.14.5) on the 12 GB Arch laptop
@@ -55,7 +55,7 @@
 
 - [ ] Fan out the last agent (`pc2-win10`) -- optional extra coverage; the gate is long met (now 3/3 nodes Active). NOTE: the earlier-planned `pc1-ubuntu` was the same physical box as `popos-mainpc` (Pop!_OS = Ubuntu-based, 16 GB) -- not a separate node.
 - [x] **Raspberry Pi 4 setup -- DONE 2026-06-17** (ahead of the June 21 target): Suricata + Wazuh agent live on `rpi-sensor`. See Phase 7 below.
-- [~] Phase 3: Threat simulation -- **attacker VM built 2026-06-17** (minimal Arch `zeno` / `ultron` / `192.168.1.106`, bridged, SSH-driven from the laptop; tools: nmap/hydra/hping3/tcpdump/scapy). Next: first nmap -> Suricata-detects test against the Pi, then the full attack chain (see `phases/phase3_threat_simulation/Attacker_VM_and_Phase3_Kickoff.md` and `docs/Signature_Project_Detection_Gap.md`)
+- [~] Phase 3: Threat simulation IN PROGRESS -- attacker VM built + **first detection CONFIRMED 2026-06-17**: `nmap -sV -A` from `zeno` (.106) against the Pi (.104) -> Suricata fired `ET SCAN Possible Nmap User-Agent` (Priority 1) + protocol-anomaly alerts -> visible in Wazuh under `agent.name:rpi-sensor` (event spike, MITRE: Remote Services). Report: `incidents/phase3_threat_sim_report.md`; setup: `phases/phase3_threat_simulation/Attacker_VM_and_Phase3_Kickoff.md`. Remaining: hydra brute force, more MITRE techniques, stealth `-sS` gap test, more incident reports.
 
 ---
 
@@ -63,13 +63,12 @@
 
 Target: June 28, 2026 (2 weeks)
 
-- [ ] Run nmap scan from RPi against PC 1 and PC 2
-- [ ] Verify Wazuh catches the scan (alert visible on dashboard)
-- [ ] Run hydra SSH brute force against PC 1 (Linux)
-- [ ] Test Metasploit basic module against a test VM
-- [ ] Simulate 5 MITRE ATT&CK techniques — document each
-- [ ] Screenshot all alerts — save to `portfolio/screenshots/`
-- [ ] Write Phase 3 incident report → `incidents/phase3_threat_sim_report.md`
+- [x] **Run a scan against a target + verify Wazuh catches it — DONE 2026-06-17:** `nmap -sV -A` from attacker `zeno` (.106) -> Pi (.104); detected (ET SCAN Nmap, Priority 1 + protocol anomalies) and confirmed on the dashboard.
+- [x] **Write the first Phase 3 incident report** -> `incidents/phase3_threat_sim_report.md`
+- [ ] Stealth-scan gap test (`-sS` only) -- measure the quieter-scan coverage gap
+- [ ] hydra SSH brute force against a Linux target
+- [ ] Simulate a few MITRE ATT&CK techniques -- document each
+- [ ] Screenshot all alerts -> `portfolio/screenshots/rpi_phase3/`
 
 ---
 
