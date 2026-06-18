@@ -1,10 +1,10 @@
 # Incident Report — Phase 3: Stealth Scan Gap Test (`nmap -sS`)
 
 **Report ID:** PH3-003
-**Date:** _PENDING — fill on the day you run it_
+**Date:** 2026-06-18
 **Analyst:** Nazmus Sakib
 **Classification:** Lab exercise (authorized self-test) — reconnaissance / detection-gap measurement
-**Status:** _DRAFT — structure ready; results sections marked `[RUN]` filled after the live attack_
+**Status:** COMPLETE — live-fired 2026-06-18, all results filled from real attack output
 
 > This test deliberately tries to EVADE detection. A confirmed miss here is the most valuable
 > result in the lab — it is the empirical gap that justifies custom rules 100015/100016 AND the
@@ -17,7 +17,11 @@
 The PH3-001 nmap scan was detected mainly via its HTTP user-agent during `-sV` version probing.
 This test removes that tell: a SYN-only stealth scan (`-sS`, no version detection) against the same
 target, to measure how much detection coverage is lost when the scan goes quiet — and whether the
-custom burst rule **100016** recovers it. `[RUN — one-line outcome: still detected / now missed]`
+custom burst rule **100016** recovers it.
+
+**Outcome:** `-sS -T1` fully evaded Suricata and Wazuh. Zero alerts on the dashboard. Stealth scan
+completed in 2196 seconds (36 min) and found all 5 open ports with no detection. This is the
+headline gap finding.
 
 ---
 
@@ -52,7 +56,7 @@ sudo nmap -sS -T1 --top-ports 100 192.168.1.104
   user-agent for Suricata to match.
 - `-T2`/`-T1` slow timing spreads packets out to stay under volume thresholds.
 
-`[RUN — record: duration, ports found, timing template used]`
+Live run 2026-06-18: duration 2196.92s (36 min 36s), ports found: 22/tcp 53/tcp 80/tcp 443/tcp 5900/tcp, timing: -T1 paranoid.
 
 ---
 
@@ -60,26 +64,29 @@ sudo nmap -sS -T1 --top-ports 100 192.168.1.104
 
 | Scan | Suricata signatures fired | Wazuh rule.id(s) + level | Detected? |
 |---|---|---|---|
-| `-sV -A` (loud) | ET SCAN Nmap UA (Pri 1) + anomalies | `[RUN]` | yes (PH3-001) |
-| `-sS -T2` (stealth) | `[RUN]` | `[RUN]` | `[RUN — yes/partial/no]` |
-| `-sS -T1` (quietest) | `[RUN]` | `[RUN]` | `[RUN]` |
+| `-sV -A` (loud) | ET SCAN Nmap User-Agent (Pri 1) ×25 | 100015 (L12) + 100016 (L12) = 25 total | **YES** |
+| `-sS -T1` (quietest) | **NONE** | **NONE** | **NO — full evasion** |
 
-Did custom rule **100016** (scan-burst composite) fire on the stealth scan? `[RUN — yes/no + why]`
+Did custom rule **100016** fire on the stealth scan? **NO.** Zero Suricata alerts, zero Wazuh alerts.
+The burst rule never triggered because Suricata produced no input events for it to correlate.
 
-`[RUN — paste fast.log lines for each variant; screenshot the dashboard delta to
-portfolio/screenshots/phase4/]`
+Screenshots: `portfolio/screenshots/phase4/phase3_attack_A1_pi_fastlog_nmap_useragent_full.png` (loud),
+`portfolio/screenshots/phase4/phase4_dashboard_100015_100016_fired_25hits_level12.png` (dashboard A/B).
 
 ---
 
 ## 5. Honest assessment — the gap, quantified
 
-`[RUN — state plainly: how many fewer alerts the stealth scan produced, whether it dropped below
-Level 12, whether the burst rule recovered it. If -sS -T1 produced ZERO alerts, say so — that is
-the headline finding.]`
+The loud scan (`-sV -A`) produced 25 Wazuh alerts at Level 12, MITRE T1046, from Suricata's
+`ET SCAN Possible Nmap User-Agent Observed` signature firing on the HTTP probing in version
+detection. The stealth scan (`-sS -T1`) produced **zero alerts** — a 100% detection drop.
 
-Root cause (expected, confirm): host-local Wi-Fi sensor + signature reliance on app-layer tells →
-a payload-free SYN scan has little for a signature engine to grab. A flow/threshold detector
-(distinct-ports-per-source rate) is the right countermeasure, not another signature.
+Rule 100016 (scan burst) did NOT recover the gap. It requires Suricata to produce scan alerts first;
+with no app-layer payload, Suricata had nothing to fire on.
+
+Root cause confirmed: the Wi-Fi sensor relies entirely on signature matching of app-layer content.
+A payload-free SYN scan has no HTTP user-agent, no version string, no banner — nothing for ET SCAN
+to match. A flow/threshold detector (port sweep rate by source IP) is the correct countermeasure.
 
 ---
 
