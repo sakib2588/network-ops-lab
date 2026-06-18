@@ -58,13 +58,10 @@ the scan detection.
 The ET Open ruleset is managed by `suricata-update` and regenerated on update. Custom rules
 must be appended AFTER the managed block or placed in a separate file that is included.
 
-**Current approach (append):** custom rules are appended to the end of
-`/var/lib/suricata/rules/suricata.rules`. This works but is fragile — a `suricata-update`
-run that regenerates the file will wipe the custom rules.
-
-**Safer approach (future):** add a separate file `/var/lib/suricata/rules/local.rules` and
-reference it in `/etc/suricata/suricata.yaml` under `rule-files:`. Then `suricata-update`
-cannot touch it.
+**Current approach (fixed 2026-06-18):** custom rules live in a dedicated file
+`/var/lib/suricata/rules/local.rules`, referenced in `/etc/suricata/suricata.yaml` under
+`rule-files:`. `suricata-update` only manages `suricata.rules` — it cannot touch `local.rules`.
+The old append to `suricata.rules` was removed (was at line 66613, deleted via sed).
 
 To reload rules without restarting Suricata:
 ```bash
