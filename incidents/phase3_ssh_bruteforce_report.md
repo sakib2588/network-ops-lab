@@ -1,10 +1,10 @@
 # Incident Report — Phase 3: SSH Brute Force Against a Linux Target
 
 **Report ID:** PH3-002
-**Date:** _PENDING — fill on the day you run it_
+**Date:** 2026-06-18
 **Analyst:** Nazmus Sakib
 **Classification:** Lab exercise (authorized self-test) — credential access / brute force
-**Status:** _DRAFT — structure ready; results sections marked `[RUN]` are filled after the live attack_
+**Status:** COMPLETE — live-fired 2026-06-18, all results filled from real attack output
 
 > This is a pre-built report skeleton. Everything tagged `[RUN]` is filled in from the actual
 > attack output and dashboard — do NOT pre-fill numbers. Honest empty beats invented full.
@@ -16,7 +16,12 @@
 A controlled SSH brute-force attack was launched from the lab's attacker VM against a Linux
 target running an exposed SSH service (port 22). The objective: confirm Wazuh detects a sustained
 authentication-failure burst, measure how fast, and validate custom rule **100017** (and **100018**
-if a valid credential is included). `[RUN — one-line outcome: detected / missed]`
+if a valid credential is included).
+
+**Outcome:** Both rules fired. Rule 100017 (brute force burst, Level 12) fired on B1 (30 invalid
+attempts). Rule 100018 (compromise, Level 14) fired on B2 (5 failures then 1 success, sequential
+`-t 1`). First attempt at B2 used `-t 4` (parallel) and missed 100018 due to race condition —
+success arrived before 5 failures accumulated. Documented as a tuning note.
 
 ---
 
@@ -25,7 +30,7 @@ if a valid credential is included). `[RUN — one-line outcome: detected / misse
 | Role | Host | IP | Notes |
 |---|---|---|---|
 | Attacker | Arch VM `zeno` (user `ultron`) | 192.168.1.106 | hydra |
-| Target | `[RUN — rpi-sensor .104 / zbook-arch .108]` | | SSH (OpenSSH) exposed on 22 |
+| Target | `rpi-sensor` (Raspberry Pi 4) | 192.168.1.104 | OpenSSH 8.4p1, port 22 open |
 | SIEM | Wazuh manager (Docker 4.14.5) | 192.168.1.50 | dashboard `https://192.168.1.50` |
 
 Authorized: all hosts are the analyst's own lab.
@@ -48,32 +53,52 @@ hydra -l <username> -P small_list_with_one_valid.txt ssh://<target-ip> -t 4 -V
 - `-t 4` keeps it slow enough to be realistic and avoid lockout noise.
 - `-V` prints every attempt so the attacker-side count matches the SIEM count.
 
-`[RUN — record: number of attempts, duration, whether any succeeded]`
+**B1** (detection burst): 30 attempts, user `testuser` (invalid), rockyou.txt not found so
+generated throwaway list pw01-pw30. Duration: 57s (15:51:38-15:52:35). 0 valid passwords found.
+
+**B2 first attempt** (parallel, `-t 4`): 6 attempts user `labvictim`, password `L4bWeak!23` at
+position 6. Duration: 6s (16:10:38-16:10:44). 1 valid password found. Rule 100018 missed — race
+condition, success arrived before 5 failures accumulated in the frequency window.
+
+**B2 second attempt** (sequential, `-t 1`): 6 attempts user `labvictim`, same list. Duration ~15s.
+1 valid password found. Rule 100018 fired — Level 14, MITRE T1110+T1078.
 
 ---
 
 ## 4. Detection (defender's view)
 
-Target host (`/var/log/auth.log` or `journalctl -u ssh`):
-`[RUN — paste 2-3 representative "Failed password" lines]`
+Target Pi auth.log confirmed (grep output 2026-06-18 16:18):
+```
+Jun 18 11:10:39 pi sshd[4482]: pam_unix(sshd:auth): authentication failure; user=labvictim
+Jun 18 11:10:41 pi sshd[4482]: Failed password for labvictim from 192.168.1.106 port 40958 ssh2
+Jun 18 11:10:41 pi sshd[4480]: Failed password for labvictim from 192.168.1.106 port 40932 ssh2
+Jun 18 11:10:42 pi sshd[4480]: Accepted password for labvictim from 192.168.1.106 port 40932 ssh2
+```
 
-**Wazuh dashboard (Threat Hunting):**
-- Built-in rules expected: 5710 / 5716 (per-attempt failures), 5712 (stock brute-force composite).
-- Custom rule **100017** expected: Level 12, "SSH brute force — 6+ failed logins in 120s".
-- Custom rule **100018** (only if a valid cred was used): Level 14, "login SUCCEEDED after brute-force burst".
+**Wazuh dashboard results:**
+- Rule **100017**: FIRED — 6 total, 6 Level 12, MITRE = Brute Force (T1110). Agent: rpi-sensor.
+- Rule **100018**: FIRED (second run, `-t 1`) — 1 total, Level **14**, MITRE = Brute Force + Valid
+  Accounts (T1110 + T1078). Authentication success = 1. Agent: rpi-sensor.
 
-`[RUN — paste rule ids that fired, their levels, the event count + timestamp; screenshot to
-portfolio/screenshots/phase4/]`
+Screenshots:
+- `portfolio/screenshots/phase4/phase4_dashboard_100017_brute_force_6hits_level12_MITRE_T1110.png`
+- `portfolio/screenshots/phase4/phase4_dashboard_100018_compromise_FIRED_level14_MITRE_T1110_T1078.png`
 
 ---
 
 ## 5. Honest assessment — what worked, what did not
 
-**Worked:** `[RUN]`
+**Worked:** 100017 detected the burst correctly. 100018 detected the compromise path when run
+sequentially (`-t 1`). MITRE tags applied correctly (T1110 Brute Force, T1078 Valid Accounts).
+The full attack chain — attempt → fail burst → succeed → SIEM Level 14 alert — was proven
+end-to-end.
 
-**Limitations / negative results (record honestly):** `[RUN — e.g. did the slow -t 1 rate stay
-under the frequency threshold and evade 100017? did key-only SSH make password brute force moot?
-that is a finding, not a failure]`
+**Negative result — documented honestly:** Rule 100018 missed on the first B2 run (`-t 4` parallel).
+With 4 simultaneous SSH connections, the success event arrived before 5 valid-user failures had
+accumulated in the 120s frequency window. This is a real limitation: a fast parallel brute force
+can outrace the frequency counter and bypass 100018 even when the attacker succeeds. Mitigation:
+lower the frequency threshold to 3, or correlate on the session success directly independent of
+the failure count. Noted as a tuning gap.
 
 ---
 

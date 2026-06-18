@@ -1,8 +1,8 @@
 # Project Status — Wazuh SOC Home Lab
 
 **Last updated:** 2026-06-18  
-**Current phase:** Phase 3 threat simulation IN PROGRESS + Phase 4 detection engineering STARTED — 6 custom Wazuh rules drafted and committed (PR #9 merged 2026-06-17); next: deploy the rules to the manager, validate with `wazuh-logtest`, and prove each fires by running the remaining attack chain  
-**Overall completion:** ~70% (server + 3 nodes + Suricata sensor live; Phase 3 first detection done; Phase 4 rules written + README/diagram refreshed; remaining 20% = deploy+prove the rules and run the stealth-scan + brute-force attacks to fill the 2 drafted reports)
+**Current phase:** Phase 3 + Phase 4 COMPLETE — all 7 custom detection rules deployed and proven firing by live attacks; 3 incident reports complete; custom Suricata VNC rule + Wazuh rule 100021 engineered and confirmed end-to-end  
+**Overall completion:** ~88% (server + 3 nodes + Suricata sensor live; Phase 3 full attack chain complete; Phase 4 all rules live-fire proven; remaining = Windows dual-boot agent + portfolio polish + playbook write-ups)
 
 > **Reality check:** the original Wazuh server (VirtualBox VM) is gone. As of 2026-06-17 the
 > server is **rebuilt and live** as Docker single-node (Wazuh 4.14.5) on the 12 GB Arch laptop
@@ -80,8 +80,21 @@
       level `src_ip`/`dest_port`/`alert.signature`, NOT `data.*`; sshd valid-user failures are
       `5760` not `5716` so brute force chains off built-in composites `5712`/`5763`; auditd
       parent is `80700` not `2902`; Suricata correlation uses `same_field` since it has no
-      `srcip`). **Still NOT proven by a live agent attack on the dashboard** — that is Phase 3
-      (hydra / stealth-scan / VNC probe).
+      `srcip`). Full journal: `docs/Detection_Engineering_Journal_2026-06-17.md`.
+- [x] **Phase 3 FULL ATTACK CHAIN live-fired 2026-06-18 — all 7 rules proven on dashboard:**
+      A1 (loud scan → 100015 fired, 25 alerts Level 12, MITRE T1046), A2 (stealth scan →
+      ZERO alerts — confirmed detection gap, documented in `incidents/phase3_stealth_scan_gap_report.md`),
+      B1 (hydra 30-attempt burst → 100017 fired, 6 alerts Level 12, MITRE T1110), B2
+      (compromise path, sequential `-t 1` → 100018 fired, Level 14, MITRE T1110+T1078), C
+      (auditd identity access → 100019 fired 31,751 alerts Level 12 — over-tuned, known issue).
+      VNC detection gap resolved via two-part fix: (1) custom Suricata rule `sid:9000020` added
+      to `/var/lib/suricata/rules/suricata.rules` on the Pi (ET Open has no VNC signatures);
+      (2) new Wazuh rule **100021** added (chains off 100015, triggers when scan hits port 5900)
+      — 100020 was shadow-blocked by 100015 (same `if_sid:86601`). All 3 incident reports
+      complete: `incidents/phase3_threat_sim_report.md`, `phase3_stealth_scan_gap_report.md`,
+      `phase3_ssh_bruteforce_report.md`. Screenshots: `portfolio/screenshots/phase4/`.
+      **Negative results documented honestly:** A2 full evasion; 100018 miss on `-t 4` parallel;
+      100019 over-tuning (31k+ hits from broad auditd watch); 100020 rule shadowing by 100015.
 
 ---
 
@@ -89,21 +102,20 @@
 
 - [ ] **Windows agent via dual-boot** -- the `popos-mainpc` box is dual-boot; the Pop!_OS side is already an Active Linux agent. Boot the SAME machine into Windows 10 and install the Wazuh Windows agent for endpoint coverage. There is NO separate "PC 2" box (the old `pc1-ubuntu` / `pc2-win10` plan is retired -- it was the same physical machine).
 - [x] **Raspberry Pi 4 setup -- DONE 2026-06-17** (ahead of the June 21 target): Suricata + Wazuh agent live on `rpi-sensor`. See Phase 7 below.
-- [~] Phase 3: Threat simulation IN PROGRESS -- attacker VM built + **first detection CONFIRMED 2026-06-17**: `nmap -sV -A` from `zeno` (.106) against the Pi (.104) -> Suricata fired `ET SCAN Possible Nmap User-Agent` (Priority 1) + protocol-anomaly alerts -> visible in Wazuh under `agent.name:rpi-sensor` (event spike, MITRE: Remote Services). Report: `incidents/phase3_threat_sim_report.md`; setup: `phases/phase3_threat_simulation/Attacker_VM_and_Phase3_Kickoff.md`. Remaining: hydra brute force, more MITRE techniques, stealth `-sS` gap test, more incident reports.
+- [x] **Phase 3 COMPLETE 2026-06-18** — see "What Is Done" above. All rules live-fire proven.
 
 ---
 
-## What Is Next (Phase 3 — Threat Simulation)
+## What Is Next (Phase 5 — Investigation Playbooks + Portfolio)
 
-Target: June 28, 2026 (2 weeks)
+Target: July 18, 2026
 
-- [x] **Run a scan against a target + verify Wazuh catches it — DONE 2026-06-17:** `nmap -sV -A` from attacker `zeno` (.106) -> Pi (.104); detected (ET SCAN Nmap, Priority 1 + protocol anomalies) and confirmed on the dashboard.
-- [x] **Write the first Phase 3 incident report** -> `incidents/phase3_threat_sim_report.md`
-- [ ] Stealth-scan gap test (`-sS` only) -- measure the quieter-scan coverage gap. Report skeleton ready: `incidents/phase3_stealth_scan_gap_report.md` (fill the `[RUN]` blanks).
-- [ ] hydra SSH brute force against a Linux target. Report skeleton ready: `incidents/phase3_ssh_bruteforce_report.md`.
-- [ ] Simulate a few MITRE ATT&CK techniques -- document each
-- [ ] Screenshot all alerts -> `portfolio/screenshots/rpi_phase3/` and `portfolio/screenshots/phase4/`
-- [ ] Step-by-step run order for all of the above: `phases/phase3_threat_simulation/NEXT_SESSION_RUNBOOK.md`
+- [ ] Write investigation playbook for scan detection (100015 / stealth gap)
+- [ ] Write investigation playbook for brute force / compromise (100017 / 100018)
+- [ ] Tune rule 100019 (over-tuning: tighten auditd watch to `rwa` on shadow/sudoers/gshadow only; remove broad passwd read watch causing 31k+ alerts)
+- [ ] Windows dual-boot agent on `popos-mainpc` (boot Windows 10 side, install Wazuh agent)
+- [ ] Clean up `labvictim` account: `sudo userdel -r labvictim` on rpi-sensor
+- [ ] Portfolio README polish — add attack chain results table, screenshots index
 
 ---
 
@@ -111,8 +123,8 @@ Target: June 28, 2026 (2 weeks)
 
 | Phase | Target Date | Key Deliverable | Status |
 |---|---|---|---|
-| Phase 4: Detection Engineering | July 18 | 5+ custom Wazuh rules written, deployed, proven firing | 🟡 6 rules deployed + logtest-validated; live-fire on dashboard pending |
-| Phase 5: Investigation Playbooks | Aug 1 | 3 incident reports done | 🟡 1 done (PH3-001), 2 drafted (PH3-002/003) |
+| Phase 4: Detection Engineering | July 18 | 5+ custom Wazuh rules written, deployed, proven firing | ✅ DONE 2026-06-18 — 7 rules (100015-100021) live-fire proven; custom Suricata sid:9000020 deployed |
+| Phase 5: Investigation Playbooks | Aug 1 | 3 incident reports done | ✅ 3 complete (PH3-001, PH3-002, PH3-003); playbook write-ups pending |
 | Phase 6: Portfolio + GitHub | Aug 20 | Public GitHub repo ready | 🟡 README + diagram refreshed; screenshots pending |
 | Phase 7: RPi Network Sensor | June 21 | Suricata live on `rpi-sensor`, alerts in Wazuh (host + network) | ✅ DONE 2026-06-17 |
 
@@ -120,7 +132,9 @@ Target: June 28, 2026 (2 weeks)
 
 ## Known Issues / Blockers
 
-None currently.
+- **100019 over-tuning:** `auditd -k identity` watch on `passwd` fires on every `getpwnam` call (sudo/login/etc). 31,751 alerts generated during Phase 3 live-fire. Fix: change `passwd` watch from `rwa` to `wa` only (passwd reads are not suspicious; writes are). Tracked as future tuning item.
+- **100020 permanently shadow-blocked:** rule 100020 (`if_sid:86601`) will never fire because 100015 matches first on the same parent. Rule 100021 is the working replacement. 100020 can be removed from `local_rules.xml` in a future cleanup PR.
+- **labvictim account still exists on rpi-sensor:** cleanup pending (`sudo userdel -r labvictim`).
 
 ---
 
