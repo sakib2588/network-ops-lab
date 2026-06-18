@@ -132,9 +132,12 @@ Target: July 18, 2026
 
 ## Known Issues / Blockers
 
-- **100019 over-tuning:** `auditd -k identity` watch on `passwd` fires on every `getpwnam` call (sudo/login/etc). 31,751 alerts generated during Phase 3 live-fire. Fix: change `passwd` watch from `rwa` to `wa` only (passwd reads are not suspicious; writes are). Tracked as future tuning item.
-- **100020 permanently shadow-blocked:** rule 100020 (`if_sid:86601`) will never fire because 100015 matches first on the same parent. Rule 100021 is the working replacement. 100020 can be removed from `local_rules.xml` in a future cleanup PR.
-- **labvictim account still exists on rpi-sensor:** cleanup pending (`sudo userdel -r labvictim`).
+- **100020 permanently shadow-blocked:** rule 100020 (`if_sid:86601`) will never fire for scan events because 100015 matches first on the same parent. Rule 100021 is the working replacement. 100020 can be removed from `local_rules.xml` in a future cleanup PR (low priority — it still fires for genuine non-scan VNC flows).
+
+## Resolved Issues (closed 2026-06-18)
+
+- ~~**100019 over-tuning:**~~ **FIXED** — `/etc/passwd` watch changed from `-p rwa` to `-p wa` on `zbook-arch`. Passwd reads are benign system activity; only writes now trigger alerts. See PR #14.
+- ~~**labvictim account on rpi-sensor:**~~ **CONFIRMED GONE** — `sudo userdel -r labvictim` returned "user does not exist" confirming it was already removed.
 
 ---
 
