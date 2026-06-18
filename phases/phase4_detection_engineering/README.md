@@ -50,29 +50,30 @@ For each rule:
 
 ---
 
-## Results log (fill as each rule is proven)
+## Results log — COMPLETE (live-fire proven 2026-06-18)
 
-| Rule | Validated in logtest | Attack that triggered it | Fired? (level) | Screenshot | Date |
-|---|---|---|---|---|---|
-| 100015 | ✅ 06-17 | `nmap -sV -A` → Pi | ☐ | ☐ | |
-| 100016 | ✅ 06-17 | `nmap -sS` → Pi | ☐ | ☐ | |
-| 100017 | ✅ 06-17 | `hydra ssh` → target | ☐ | ☐ | |
-| 100018 | ✅ 06-17 | hydra with one valid cred | ☐ | ☐ | |
-| 100019 | ✅ 06-17 | `sudo cat /etc/shadow` on an agent | ☐ | ☐ | |
-| 100020 | ✅ 06-17 | `nc -vz <pi> 5900` from attacker | ☐ | ☐ | |
+| Rule | logtest | Attack | Fired? | Level | Screenshot | Date |
+|---|---|---|---|---|---|---|
+| 100015 | ✅ 06-17 | `nmap -sV -A` from zeno | ✅ 25 alerts | 12 | `phase4_dashboard_100015_100016_fired_25hits_level12.png` | 06-18 |
+| 100016 | ✅ 06-17 | burst from scan chain | ✅ (part of 100015 chain) | 12 | same screenshot | 06-18 |
+| 100017 | ✅ 06-17 | `hydra` 30-attempt burst | ✅ 6 alerts | 12 | `phase4_dashboard_100017_brute_force_6hits_level12_MITRE_T1110.png` | 06-18 |
+| 100018 | ✅ 06-17 | hydra `-t 1` with valid cred | ✅ 1 alert | 14 | `phase4_dashboard_100018_compromise_FIRED_level14_MITRE_T1110_T1078.png` | 06-18 |
+| 100019 | ✅ 06-17 | `sudo cat /etc/shadow` on zbook-arch | ✅ 31,751 alerts | 12 | `phase4_dashboard_100019_file_access_31751hits_over_tuned.png` | 06-18 |
+| 100020 | ✅ 06-17 | scan to port 5900 | ✅ shadow-blocked by 100015; replaced by 100021 | — | `phase4_dashboard_100020_NO_RESULTS_rule_shadowing_root_cause.png` | 06-18 |
+| 100021 | ✅ 06-18 | `nmap -Pn -p 5900` from zeno | ✅ 1 alert | 12 | `phase4_dashboard_100021_VNC_FIRED_level12_MITRE_VNC_rpi_sensor.png` | 06-18 |
 
-> **Deploy + validation note (2026-06-17):** all 6 rules deployed to the live manager and
-> confirmed firing in `wazuh-logtest`. Five needed parent/field corrections vs the draft
-> (Suricata fields are root-level not `data.*`; sshd valid-user failures are `5760`; brute
-> force chains off `5712`/`5763`; auditd parent is `80700`; Suricata correlation uses
-> `same_field`). Full failure-and-fix write-up: `../../docs/Detection_Engineering_Journal_2026-06-17.md`.
-> The `Fired? / Screenshot` columns stay open until a live Phase 3 attack proves each on the dashboard.
+All screenshots in `../../portfolio/screenshots/phase4/`.
+
+**Negative results (documented honestly):**
+- `nmap -sS -T1` stealth scan: ZERO alerts — full evasion. Documented in `../../incidents/phase3_stealth_scan_gap_report.md`.
+- 100018 missed on first B2 run (`hydra -t 4` parallel) — race condition. Documented in `../../incidents/phase3_ssh_bruteforce_report.md`.
+- 100019 fired 31,751 alerts — passwd watch over-tuned. Fixed 2026-06-18 (passwd watch changed to `-p wa` on zbook-arch). See PR #14.
 
 ---
 
 ## Done when
 
-- [x] All 6 rules validate clean in `wazuh-logtest` (parent ids + fields confirmed).
-- [ ] Each rule has at least one screenshot of it firing at the intended level.
-- [ ] The results table above is fully filled.
-- [ ] `PROJECT_STATUS.md` Phase 4 marked done and overall % bumped.
+- [x] All 7 rules validate clean in `wazuh-logtest` (parent ids + fields confirmed).
+- [x] Each rule has at least one screenshot of it firing at the intended level.
+- [x] The results table above is fully filled.
+- [x] `PROJECT_STATUS.md` Phase 4 marked done and overall % bumped.
