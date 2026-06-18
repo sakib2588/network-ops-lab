@@ -128,12 +128,32 @@
        Finding: the Pi scan exposed RealVNC on 5900 — a remote-control surface that
        should be localhost-only. Alert on any Suricata flow to dest port 5900 so an
        attempt to reach it is never silent. MITRE T1021.005 (VNC / Remote Services).
-       Adjust the field name to your eve schema (data.dest_port) via wazuh-logtest.
+       Field name confirmed via wazuh-logtest: the JSON decoder emits a FLAT
+       'dest_port' (NOT 'data.dest_port'). See companion rule 100021 for the
+       scan-overlap case.
        ===================================================================== -->
   <rule id="100020" level="10">
     <if_sid>86601</if_sid>
     <field name="dest_port">5900</field>
     <description>Connection to exposed VNC service (5900) on the sensor from $(src_ip)</description>
+    <mitre>
+      <id>T1021.005</id>
+    </mitre>
+    <group>attack,lateral_movement,vnc,suricata,</group>
+  </rule>
+
+  <!-- =====================================================================
+       RULE 100021 — VNC (5900) targeted DURING a network scan
+       Overlap case: when a Suricata ET SCAN/Nmap signature also hits dest
+       port 5900, surface it as the VNC-specific rule at scan severity
+       instead of the generic scan rule 100015. Chains off 100015 so plain
+       scans stay on 100015 and plain (non-scan) VNC flows stay on 100020.
+       MITRE T1021.005 (VNC / Remote Services).
+       ===================================================================== -->
+  <rule id="100021" level="12">
+    <if_sid>100015</if_sid>
+    <field name="dest_port">5900</field>
+    <description>VNC (5900) targeted during a network scan from $(src_ip)</description>
     <mitre>
       <id>T1021.005</id>
     </mitre>
