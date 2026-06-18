@@ -1,6 +1,6 @@
 # Project Status — Wazuh SOC Home Lab
 
-**Last updated:** 2026-06-17  
+**Last updated:** 2026-06-18  
 **Current phase:** Phase 3 threat simulation IN PROGRESS + Phase 4 detection engineering STARTED — 6 custom Wazuh rules drafted and committed (PR #9 merged 2026-06-17); next: deploy the rules to the manager, validate with `wazuh-logtest`, and prove each fires by running the remaining attack chain  
 **Overall completion:** ~70% (server + 3 nodes + Suricata sensor live; Phase 3 first detection done; Phase 4 rules written + README/diagram refreshed; remaining 20% = deploy+prove the rules and run the stealth-scan + brute-force attacks to fill the 2 drafted reports)
 
@@ -34,6 +34,21 @@
       Telemetry enabled (no longer "quiet"): `auditd` installed + enabled with 4 audit rules
       (execve command exec, plus `wa` watches on sudoers/passwd/shadow), and `ossec.conf` set to
       ingest `/var/log/audit/audit.log` so command-execution and identity events reach the SIEM.
+- [x] **Identity file-integrity watches hardened 2026-06-18 (on `zbook-arch`):** added
+      `/etc/audit/rules.d/identity.rules` with a dedicated `identity` key covering all four
+      identity files -- `shadow`, `sudoers`, `passwd`, `gshadow`. shadow/sudoers/gshadow use
+      `rwa` (reads of these are inherently suspicious); `passwd` uses `wa` only, because `r` on
+      passwd floods the log (every `getpwnam` from sudo/login/etc. fires a record -- a single
+      `sudo` produced 3+ passwd reads in testing). Removed the now-duplicate `wa` watches from
+      `wazuh-soc.rules` (which had collided on load with a "Rule exists" error and left stacked
+      `wa`+`rwa` watches); that file now carries only the `execve` exec rule. Verified end to end:
+      `sudo cat /etc/shadow` produced a `type=SYSCALL syscall=257 (openat) success=yes
+      comm="sudo" key="identity"` record for `/etc/shadow` in `ausearch -k identity`, confirming
+      the watch fires and reaches the audit log (and therefore Wazuh).
+      Note: the original task brief labeled this box "pop-os" -- it is actually `zbook-arch`
+      (Arch Linux, hostname `Ultran`, 192.168.1.108). `popos-mainpc` is a separate box (already
+      enrolled as Agent 2, see below); the same identity watches were also applied there
+      (user-reported) but are not yet independently re-verified in this log.
 - [x] **Agent 2 enrolled 2026-06-17 — `popos-mainpc`:** the always-on Pop!_OS 24.04 main PC
       (16 GB, IP 192.168.1.105 — also the day-to-day workstation). Installed `wazuh-agent 4.14.5-1`
       (amd64 `.deb`, Section 3 method), pointed at `192.168.1.50`. Service Active, ESTABLISHED TCP
