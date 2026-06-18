@@ -104,19 +104,52 @@ Full chain run from attacker VM `zeno` (192.168.1.106) against `rpi-sensor` (192
 
 ## Screenshots
 
-All evidence screenshots in `portfolio/screenshots/phase4/` (21 images).
+All 21 evidence screenshots in `portfolio/screenshots/phase4/`, grouped by attack stage. Filenames are self-describing (rule ID, hit count, alert level, MITRE technique).
 
+**Pre-attack baseline**
 | Screenshot | What it shows |
 |---|---|
-| `phase4_dashboard_100015_100016_fired_25hits_level12.png` | Loud scan detected — 25 Level-12 alerts |
-| `phase4_dashboard_100017_brute_force_6hits_level12_MITRE_T1110.png` | SSH brute force detected |
-| `phase4_dashboard_100018_compromise_FIRED_level14_MITRE_T1110_T1078.png` | Compromise detected — Level 14 |
-| `phase4_dashboard_100018_first_attempt_miss_parallel_timing.png` | 100018 miss on `-t 4` (negative result) |
-| `phase4_dashboard_100019_file_access_31751hits_over_tuned.png` | 100019 firing — over-tuning visible |
-| `phase4_dashboard_100020_NO_RESULTS_rule_shadowing_root_cause.png` | Rule shadowing root cause |
-| `phase4_dashboard_100021_VNC_FIRED_level12_MITRE_VNC_rpi_sensor.png` | VNC detection after two-part fix |
-| `phase4_pi_fastlog_custom_sid9000020_VNC_FIRED.png` | Custom Suricata VNC rule firing |
-| `phase4_auditd_100019_passwd_watch_retuned_wa_only_flood_killed.png` | Auditd retune — flood fixed |
+| `phase3_pi_fastlog_pre_attack_noise.png` | Suricata fast.log baseline noise before any attack |
+| `phase3_attack_A1_runner_start_preflight.png` | Attack runner preflight — environment ready |
+
+**A1 — loud scan (`nmap -sV -A`, detected)**
+| Screenshot | What it shows |
+|---|---|
+| `phase3_attack_A1_nmap_loud_running.png` | Loud nmap scan in progress from attacker `zeno` |
+| `phase3_attack_A1_pi_fastlog_ET_SCAN_nmap_detected.png` | Suricata ET SCAN signature catches the nmap probe |
+| `phase3_attack_A1_pi_fastlog_nmap_useragent_full.png` | Full nmap user-agent string in Suricata log |
+| `phase4_dashboard_100015_100016_fired_25hits_level12.png` | Loud scan detected — 25 Level-12 alerts (100015/100016) |
+| `phase4_dashboard_events_100015_100016_descriptions.png` | Dashboard event view — 100015/100016 rule descriptions |
+
+**A2 — stealth scan (`nmap -sS -T1`, EVADED — headline gap)**
+| Screenshot | What it shows |
+|---|---|
+| `phase3_attack_A2_stealth_scan_starting.png` | Stealth SYN scan starting — produced zero alerts (full evasion) |
+
+**B1/B2 — SSH brute force + compromise**
+| Screenshot | What it shows |
+|---|---|
+| `phase4_dashboard_100017_brute_force_6hits_level12_MITRE_T1110.png` | SSH brute force detected — 6 alerts (100017, T1110) |
+| `phase4_dashboard_100018_compromise_FIRED_level14_MITRE_T1110_T1078.png` | Compromise detected — Level 14 (100018, T1110+T1078) |
+| `phase4_dashboard_100018_first_attempt_miss_parallel_timing.png` | 100018 miss on `hydra -t 4` parallel race (negative result) |
+
+**C — identity file access (auditd)**
+| Screenshot | What it shows |
+|---|---|
+| `phase4_dashboard_100019_file_access_31751hits_over_tuned.png` | 100019 firing — 31,751 hits, over-tuning visible |
+| `phase4_dashboard_100019_file_access_29688hits_level12.png` | 100019 file-access alerts (earlier count) |
+| `phase4_auditd_100019_passwd_watch_retuned_wa_only_flood_killed.png` | Auditd passwd watch retuned `rwa`→`wa` — flood fixed |
+
+**VNC — rule shadowing + two-part fix**
+| Screenshot | What it shows |
+|---|---|
+| `phase4_dashboard_100020_NO_RESULTS_rule_shadowing_root_cause.png` | 100020 no results — rule shadowing root cause |
+| `phase4_dashboard_100020_VNC_NO_RESULTS_gap_finding.png` | VNC gap finding — 100020 silent |
+| `phase4_dashboard_100020_VNC_STILL_GAP_ET_no_VNC_signatures.png` | Confirmed: ET Open ships no VNC signatures |
+| `phase4_suricata_custom_VNC_rule_sid9000020_added_to_rules_file.png` | Custom Suricata rule sid:9000020 added to local.rules |
+| `phase4_pi_fastlog_custom_sid9000020_VNC_FIRED.png` | Custom Suricata VNC rule firing on the Pi |
+| `phase4_logtest_100021_VNC_scan_port5900_decode_confirmed.png` | wazuh-logtest confirms 100021 decode on port 5900 |
+| `phase4_dashboard_100021_VNC_FIRED_level12_MITRE_VNC_rpi_sensor.png` | VNC detection working after two-part fix (100021, L12) |
 
 ---
 

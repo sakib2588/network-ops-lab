@@ -110,12 +110,13 @@
 
 Target: July 18, 2026
 
-- [ ] Write investigation playbook for scan detection (100015 / stealth gap)
-- [ ] Write investigation playbook for brute force / compromise (100017 / 100018)
-- [ ] Tune rule 100019 (over-tuning: tighten auditd watch to `rwa` on shadow/sudoers/gshadow only; remove broad passwd read watch causing 31k+ alerts)
+- [x] **Write investigation playbook for scan detection (100015 / stealth gap)** — DONE: `phases/phase5_playbooks/playbook_scan_detection.md` (PB-001, 8 sections, triage + stealth-gap + containment + escalation)
+- [x] **Write investigation playbook for brute force / compromise (100017 / 100018)** — DONE: `phases/phase5_playbooks/playbook_bruteforce_compromise.md` (PB-002, 9 sections, P1 compromise response + parallel-race limitation)
+- [x] **Tune rule 100019** — DONE (passwd watch `rwa`→`wa`, flood killed; PR #14)
 - [ ] Windows dual-boot agent on `popos-mainpc` (boot Windows 10 side, install Wazuh agent)
-- [ ] Clean up `labvictim` account: `sudo userdel -r labvictim` on rpi-sensor
-- [ ] Portfolio README polish — add attack chain results table, screenshots index
+- [x] **Clean up `labvictim` account** — CONFIRMED GONE (`userdel -r` returned "user does not exist")
+- [x] **Portfolio README polish** — DONE: attack-chain results table + full 21-image screenshots index in `portfolio/README.md`
+- [ ] (optional) nProbe NetFlow export → Wazuh / thesis PCAP pipeline (nProbe installed + licensed, not started)
 
 ---
 
