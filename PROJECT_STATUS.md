@@ -1,4 +1,4 @@
-# Project Status — Wazuh SOC Home Lab
+# Project Status — Multi-OS Home Network Operations Lab
 
 **Last updated:** 2026-06-19  
 **Current phase:** Phase 3 + Phase 4 COMPLETE; **Windows endpoint now enrolled — 4-OS fleet live.** Phase 8 (Windows endpoint detection: Sysmon + Atomic Red Team) PLANNED, not yet executed.  
