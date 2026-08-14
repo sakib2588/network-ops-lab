@@ -16,3 +16,12 @@ Thumbs.db
 # Wazuh runtime artifacts (if ever copied in)
 *.log
 ossec.conf.bak
+
+# Vendor licence / order details — never commit
+# nProbe_Integration_Plan_2026-06-17.md carries a real ntop OrderId next to the
+# account email, which is enough to attempt a licence regeneration. It was swept
+# into a staged commit once on 2026-08-15 by a broad `git add -A docs/` and had to
+# be backed out before the push. Ignored so that cannot happen again.
+docs/nProbe_Integration_Plan_2026-06-17.md
+*license*.txt
+*licence*.txt
