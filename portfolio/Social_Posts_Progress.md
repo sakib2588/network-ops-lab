@@ -8,16 +8,24 @@ No secrets, no real IPs. Honest framing: the project is IN PROGRESS, and the bui
 
 ## The phase roadmap (use this as the "project plan" graphic or list)
 
+> **Updated 2026-08-14.** The table below was written in June and had gone stale; corrected
+> against PROJECT_STATUS.md. POST 1 and POST 2 now undersell the lab badly -- POST 1 is a
+> Docker disk-space story, which was the strongest material in June and is not any more.
+> Prefer POST 3.
+
 | Phase | Focus | Status |
 |---|---|---|
 | 0 | Environment setup (host, network) | Done |
 | 1 | Wazuh deployment (SIEM server) | Done (rebuilt on Docker, 2026-06-17) |
-| 2 | Log ingestion from agents | In progress (server live, agents next) |
-| 3 | Threat simulation (nmap, brute force, MITRE ATT&CK) | Planned |
-| 4 | Detection engineering (custom Wazuh rules) | Planned |
-| 5 | Investigation playbooks / incident reports | Planned |
-| 6 | Portfolio + public GitHub write-up | Planned |
-| 7 | Raspberry Pi network sensor (Suricata NIDS) | Planned |
+| 2 | Log ingestion from agents | Done -- 4 agents across 4 OS (Pop!_OS, Arch, Debian/Pi, Windows) |
+| 3 | Threat simulation (nmap, brute force, MITRE ATT&CK) | **Done 2026-06-18** -- full attack chain live-fired |
+| 4 | Detection engineering (custom Wazuh rules) | **Done** -- 7 rules (100015-100021), all proven on dashboard |
+| 5 | Investigation playbooks / incident reports | Done -- playbooks written, reports filled |
+| 6 | Portfolio + public GitHub write-up | In progress -- 21 screenshots indexed |
+| 7 | Raspberry Pi network sensor (Suricata NIDS) | Done 2026-06-17 |
+| 8 | Windows endpoint detection (Sysmon + Atomic Red Team) | Planned |
+
+Overall: ~90%.
 
 Architecture in one line: host agents (Linux + Windows) report endpoint logs to a Wazuh
 server, and a Raspberry Pi running Suricata adds network-layer visibility - two vantage
@@ -88,6 +96,71 @@ detection, then start simulating attacks and writing detections for the gaps I f
 Following along is welcome. I will keep posting the rough edges, not just the wins.
 
 #cybersecurity #blueteam #SOC #SIEM #wazuh #suricata #homelab #detectionengineering
+
+---
+
+## POST 3 - the detection-engineering post (RECOMMENDED, added 2026-08-14)
+
+Why this one: "I built a SIEM lab" is a post hundreds of people make, and most are three VMs
+on one laptop with no authored rules. The differentiator is the six documented failures in
+`docs/Detection_Engineering_Journal_2026-06-17.md`. Almost nobody publishes the part where
+their rules did not work.
+
+Pair it with `portfolio/screenshots/phase4/phase4_dashboard_100015_100016_fired_25hits_level12.png`.
+
+---
+
+I wrote seven custom detection rules for my Wazuh SOC lab.
+
+Every single one of them was wrong the first time.
+
+Here is what the rule engine actually taught me, which no tutorial mentioned.
+
+1. The field name you match on is not the field name you see.
+
+My Suricata rules matched data.alert.signature and data.src_ip, copied from what the
+dashboard displays. They fired nothing. wazuh-logtest showed the decoder exposes those at the
+root: alert.signature, src_ip, no data prefix. The dotted path is how a field appears in the
+final alert document, not how the decoder names it for matching. Two rules were silently dead
+over one prefix.
+
+2. A built-in correlation helper silently did nothing.
+
+My scan-burst rule used same_source_ip and never fired, even with a dozen scan alerts from one
+address. same_source_ip keys on a decoded field called srcip. Suricata emits src_ip, with an
+underscore. No match, no error, no alert. same_field src_ip fixed it. A correlation that never
+matches looks exactly like an attack that never happened.
+
+3. I was watching for the wrong login failure.
+
+My SSH brute-force rule chained off event 5716 and would not escalate after ten failed logins.
+A failed password for a VALID user decodes to 5760; an invalid user is 5710. I had keyed on
+neither. My hand-rolled frequency counter was also redundant - the engine already escalates a
+5710 burst to 5712 and a 5760 burst to 5763. I rebuilt the rule to chain off those.
+
+Being honest: that rule is tuning of a built-in detection, not a novel signature. That is in
+the rule comment too.
+
+4. One rule was shadowing another.
+
+My VNC rule stopped a later rule from ever evaluating, because Wazuh stops at the first match.
+Fixing it needed a seventh rule to handle the overlap. Rule order is not cosmetic.
+
+Then I ran the whole attack chain live - loud nmap, stealth scan, SSH brute force, and the
+follow-on techniques - and all seven fired on the dashboard, each with a RED/GREEN cycle:
+confirm the rule does NOT fire before the attack, then confirm it does. Same discipline as
+test-driven development, applied to detections.
+
+Credit where due: Wazuh and Suricata provide the engines and the built-in rulesets. My
+contribution is the tuning, the correlation logic and the analysis.
+
+Lab: Wazuh SIEM across four operating systems on real hardware, plus a Raspberry Pi running
+Suricata as a network sensor - host and network vantage points.
+
+If you are building detections, keep a build journal of what did not work. Mine turned out to
+be more useful than the rules.
+
+#cybersecurity #blueteam #SOC #SIEM #wazuh #suricata #detectionengineering #homelab
 
 ---
 
