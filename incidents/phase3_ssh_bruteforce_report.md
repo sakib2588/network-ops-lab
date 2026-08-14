@@ -6,9 +6,6 @@
 **Classification:** Lab exercise (authorized self-test) — credential access / brute force
 **Status:** COMPLETE — live-fired 2026-06-18, all results filled from real attack output
 
-> This is a pre-built report skeleton. Everything tagged `[RUN]` is filled in from the actual
-> attack output and dashboard — do NOT pre-fill numbers. Honest empty beats invented full.
-
 ---
 
 ## 1. Summary
