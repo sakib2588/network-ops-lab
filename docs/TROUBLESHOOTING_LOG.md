@@ -47,7 +47,7 @@ Full field notes: `docs/Agent_Enrollment_Handover.md` (Section 13). Summary of w
 | Symptom | Root cause | Fix |
 |---|---|---|
 | Agent connected to `.50`, then a restart flipped it to `192.168.1.10` and connect/close-looped | stale OLD-VM-lab server IP lurking in `ossec.conf` | `sudo sed -i 's#<address>[^<]*</address>#<address>192.168.1.50</address>#g' ossec.conf`; confirm `<address>` after install AND first restart (P3/P5) |
-| Every `sudo` failed: "a terminal is required to read the password" | the Claude tool / `!`-prefix / `pkexec` have no TTY or polkit agent | run all `sudo` in a real terminal window (paste with Ctrl+Shift+V) |
+| Every `sudo` failed: "a terminal is required to read the password" | non-interactive shells, `!`-prefixed commands and `pkexec` have no TTY or polkit agent | run all `sudo` in a real terminal window (paste with Ctrl+Shift+V) |
 | `printf ... \| sudo tee` wrote as normal user -> "Permission denied"; `apt-get` + `update` split | long chained one-liners line-wrap-mangle on paste | single unbroken lines, or a script file |
 | `apt` refused every operation: "Conflicting values ... Signed-By" | MEGA repo declared twice (`mega.list` AND `megaio.sources`) with different keys | disable one: `sudo mv .../mega.list .../mega.list.disabled`; `apt-get update` clean |
 | Agent "Active but quiet" | no log sources configured (P10) | install `auditd` + add an audit `<localfile>` for `/var/log/audit/audit.log`; verify via `ss -tin \| grep .50:1514` byte growth |
@@ -76,10 +76,10 @@ the most problems - every one below was hit live and fixed.
   to `~/.bashrc`.)
 - Lesson: SSH carries your local `TERM`; the remote needs that terminfo or you downgrade to xterm.
 
-**P7-3 - `claude --resume` crashed with `Bus error` on the Pi.**
-- Symptom: Claude Code (Bun) SIGBUS at startup on the Pi.
+**P7-3 - A Bun-based CLI tool crashed with `Bus error` on the Pi.**
+- Symptom: SIGBUS at startup on the Pi.
 - Cause: Bun bug on this Pi's arm64/glibc, sometimes after an `apt upgrade` changed shared libs.
-- Fix: do not run Claude on the Pi - it is the sensor. Drive everything from the laptop over SSH.
+- Fix: do not run heavy tooling on the Pi - it is the sensor. Drive everything from the laptop over SSH.
 - Lesson: keep the brain on the workstation; the Pi is an appliance.
 
 **P7-4 - `apt upgrade` looked stuck on Brave at 2%.**

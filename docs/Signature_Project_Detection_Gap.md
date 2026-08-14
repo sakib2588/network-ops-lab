@@ -365,12 +365,12 @@ There are two different theses living in this repo:
 - **Locked narrative (use this):** Adversarial ML for NIDS, the realizability gap, Ennaji et
   al. (2025). It appears in `PROJECT_STATUS.md` and
   `phases/phase7_raspberry_pi/RPi_Suricata_Setup.md`.
-- **Conflicting narrative (do not use here):** XAIT / IoT / SHAP / CIC-IoT-2023. It fills the
-  archived `docs/archive/UNVERIFIED_Full_Implementation_Guide.md`, which is quarantined (AI draft,
-  unverified metrics) and is not part of the portfolio.
+- **Conflicting narrative (do not use here):** XAIT / IoT / SHAP / CIC-IoT-2023. This came from
+  an early unverified draft that carried aspirational metrics and an outdated thesis framing.
+  The draft was deleted from the repo on 2026-08-15; nothing in it was ever a real result.
 
-This project uses only the locked narrative. The XAIT draft has been moved out of the main docs
-path; finish reconciling the lab docs to the locked narrative before the repo goes fully public.
+This project uses only the locked narrative. If the XAIT framing turns up anywhere else in the
+lab docs, it is a leftover from that deleted draft and should be corrected, not cited.
 
 ---
 

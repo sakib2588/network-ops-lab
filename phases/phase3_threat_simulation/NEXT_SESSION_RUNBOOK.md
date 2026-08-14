@@ -1,7 +1,7 @@
 # Next-Session Runbook — drive Phase 3 + Phase 4 to done (55% to 90%)
 
-**For:** Nazmus Sakib, at the keyboard. Everything here is the part Claude can't do — the live
-attacks on your physical lab. The rules, reports, and README are already written; this runbook
+**For:** Nazmus Sakib, at the keyboard. Everything here has to happen on the physical lab: the
+live attacks, on real hosts. The rules, reports, and README are already written; this runbook
 deploys and PROVES them. Work top to bottom. Each block ends with a screenshot to capture.
 
 **Hosts:** attacker `zeno` .106 · sensor/target `rpi-sensor` .104 · agent `zbook-arch` .108 ·
